@@ -8,17 +8,14 @@ import manageInventory from './views/ManageInventory.vue' // Adjust path as need
 </script>
 
 <style>
-/* Global styles if needed */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+html,
+body,
+#app {
+  width: 100%;
+  min-height: 100%;
 }
 
 body {
-  background: #eef2f8;
-  font-family: 'Inter', sans-serif;
-  color: #0a1c2f;
-  padding: 24px 20px;
+  margin: 0;
 }
 </style>

@@ -1,5 +1,5 @@
 ﻿<template>
-  <div>
+  <div class="manage-inventory-page">
     <!-- USE MODAL -->
     <div v-if="useModalOpen" class="modal-overlay" style="display: flex;">
       <div class="modal-box">
@@ -181,7 +181,7 @@
       <div class="main-content">
         <div class="top-bar">
           <div class="page-title"><h2>Manage Inventory</h2></div>
-          <div style="display: flex; gap: 16px; align-items: center;">
+          <div class="top-bar-actions">
             <div class="search-wrapper">
               <i class="fas fa-search"></i>
               <input type="text" v-model="searchQuery" placeholder="Search any food (milk, rice, ice cream...)" autocomplete="off">
@@ -401,40 +401,40 @@
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="right-sidebar">
-      <div class="right-box">
-        <div class="bulk-select-controls">
-          <span class="selection-count" id="selectionCount">{{ selectedDonationIds.size }} selected</span>
-          <button class="right-btn" id="selectAllBtn" @click="selectAllVisible"><i class="fas fa-check-double"></i> Select All</button>
-          <button class="right-btn" id="clearSelectionBtn" @click="clearAllSelections"><i class="fas fa-times"></i> Clear</button>
-          <span class="search-results-info" id="searchResultsInfo">{{ searchResultsInfo }}</span>
-        </div>
+      <aside class="right-sidebar">
+          <div class="right-box">
+            <div class="bulk-select-controls">
+              <span class="selection-count" id="selectionCount">{{ selectedDonationIds.size }} selected</span>
+              <button class="right-btn" id="selectAllBtn" @click="selectAllVisible"><i class="fas fa-check-double"></i> Select All</button>
+              <button class="right-btn" id="clearSelectionBtn" @click="clearAllSelections"><i class="fas fa-times"></i> Clear</button>
+              <span class="search-results-info" id="searchResultsInfo">{{ searchResultsInfo }}</span>
+            </div>
 
-        <button class="right-btn" id="filterBtn" @click="cycleFilterMode">
-          <i class="fas fa-filter"></i> Filter: {{ getFilterLabel(currentFilter) }}
-        </button>
-        <button class="right-btn" id="sortBtn" @click="cycleSortMode">
-          <i class="fas fa-sort"></i> Sort: {{ getSortLabel(currentSort) }}
-        </button>
-      </div>
+            <button class="right-btn" id="filterBtn" @click="cycleFilterMode">
+              <i class="fas fa-filter"></i> Filter: {{ getFilterLabel(currentFilter) }}
+            </button>
+            <button class="right-btn" id="sortBtn" @click="cycleSortMode">
+              <i class="fas fa-sort"></i> Sort: {{ getSortLabel(currentSort) }}
+            </button>
+          </div>
 
-      <div class="right-box">
-        <button class="donate-bulk-btn" id="donateBulkBtn" :disabled="selectedDonationIds.size === 0" @click="bulkDonateAction">
-          <i class="fas fa-hand-holding-heart"></i> Donate Selected
-        </button>
-      </div>
+          <div class="right-box">
+            <button class="donate-bulk-btn" id="donateBulkBtn" :disabled="selectedDonationIds.size === 0" @click="bulkDonateAction">
+              <i class="fas fa-hand-holding-heart"></i> Donate Selected
+            </button>
+          </div>
 
-      <div class="right-box">
-        <button class="right-btn">
-          <i class="fas fa-bolt"></i> Meal Plan
-        </button>
-      </div>
+          <div class="right-box">
+            <button class="right-btn">
+              <i class="fas fa-bolt"></i> Meal Plan
+            </button>
+          </div>
 
-      <div class="floating-add" id="addRight" @click="openAddModal">
-        +
-      </div>
+          <div class="floating-add" id="addRight" @click="openAddModal">
+            +
+          </div>
+      </aside>
     </div>
   </div>
 </template>
@@ -755,80 +755,86 @@ export default {
   box-sizing: border-box;
 }
 
-body {
+.manage-inventory-page {
   background: #eef2f8;
   font-family: 'Inter', sans-serif;
   color: #0a1c2f;
+  min-height: 100vh;
   padding: 24px 20px;
 }
 
 .dashboard {
-  max-width: 1440px;
+  max-width: 1760px;
   margin: 0 auto;
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: clamp(220px, 16vw, 256px) minmax(0, 1fr) clamp(232px, 18vw, 276px);
+  gap: clamp(18px, 2vw, 28px);
+  align-items: start;
 }
 
 /* SIDEBAR */
 .sidebar {
-  flex: 0 0 110px;
   background: white;
-  border-radius: 25px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.02), 0 2px 6px rgba(0, 0, 0, 0.02);
-  padding: 28px 20px;
-  height: fit-content;
+  border-radius: 34px;
+  box-shadow: 0 18px 45px rgba(31, 47, 62, 0.06);
+  padding: 34px 24px 26px;
+  position: sticky;
+  top: 24px;
 }
+
 .logo-area {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 40px;
+  gap: 14px;
+  margin-bottom: 44px;
   padding-left: 6px;
 }
 .logo-icon {
   background: #2c7a4d;
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 22px;
+  font-size: 24px;
 }
 .logo-text {
   font-weight: 800;
-  font-size: 1.6rem;
-  letter-spacing: -0.3px;
+  font-size: 1.55rem;
+  letter-spacing: -0.5px;
   color: #1e3a2f;
 }
 .nav-item {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 12px 16px;
-  margin: 6px 0;
-  border-radius: 24px;
+  padding: 14px 18px;
+  margin: 8px 0;
+  border-radius: 22px;
   font-weight: 500;
-  color: #2c3e4e;
+  font-size: 0.98rem;
+  color: #17304f;
   cursor: default;
   transition: 0.2s;
 }
-.nav-item i { width: 24px; color: #5b7a9a; }
+.nav-item i { width: 24px; color: #6883a8; }
 .nav-item.active {
   background: #eef6ef;
   color: #2c6e49;
 }
 .nav-item.active i { color: #2c6e49; }
-hr { margin: 20px 0 16px; border-top: 1px solid #e9edf2; }
+hr { margin: 28px 0 0; border-top: 1px solid #e9edf2; }
 
-/* MAIN CONTENT */
-.main-content { flex: 1; min-width: 280px; }
+.main-content {
+  min-width: 0;
+}
+
 .top-bar {
   background: white;
-  border-radius: 32px;
-  padding: 16px 26px;
+  border-radius: 36px;
+  padding: 18px 30px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -836,26 +842,45 @@ hr { margin: 20px 0 16px; border-top: 1px solid #e9edf2; }
   gap: 16px;
   margin-bottom: 28px;
 }
-.page-title h2 { font-size: 1.7rem; font-weight: 700; }
+.page-title h2 { font-size: 2.15rem; font-weight: 800; }
+.top-bar-actions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex: 1;
+  min-width: min(100%, 420px);
+  justify-content: flex-end;
+}
 .search-wrapper {
   display: flex;
   align-items: center;
   background: #f1f5f9;
   border-radius: 60px;
-  padding: 8px 20px;
+  padding: 0 18px;
   gap: 10px;
-  min-width: 240px;
+  min-width: min(100%, 360px);
+  min-height: 50px;
 }
-.search-wrapper i { color: #7e95b0; }
-#searchInput {
+.search-wrapper i { color: #6f89ad; font-size: 1.25rem; }
+.search-wrapper input {
   border: none;
   background: transparent;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   outline: none;
-  width: 220px;
+  width: 100%;
   font-family: 'Inter', sans-serif;
 }
-.action-icons { display: flex; gap: 22px; font-size: 1.3rem; color: #5f7f9e; }
+.action-icons {
+  display: flex;
+  gap: 22px;
+  font-size: 1.35rem;
+  color: #5f7f9e;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+}
 
 /* Bulk bar */
 .bulk-bar {
@@ -872,17 +897,17 @@ hr { margin: 20px 0 16px; border-top: 1px solid #e9edf2; }
 }
 .bulk-select-controls {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
 }
 .select-all-btn, .clear-selection-btn, .right-btn {
-  background: #f1f5f9;
+  background: #f3f6fb;
   border: none;
-  padding: 10px 16px;
+  padding: 12px 16px;
   border-radius: 40px;
   font-weight: 500;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   cursor: pointer;
   transition: 0.2s;
   display: inline-flex;
@@ -896,7 +921,9 @@ hr { margin: 20px 0 16px; border-top: 1px solid #e9edf2; }
   background: #2c7a4d;
   color: white;
   border: none;
-  padding: 10px 28px;
+  width: 100%;
+  justify-content: center;
+  padding: 14px 24px;
   border-radius: 40px;
   font-weight: 600;
   display: flex;
@@ -911,29 +938,33 @@ hr { margin: 20px 0 16px; border-top: 1px solid #e9edf2; }
 }
 .selection-count {
   background: #eef2ff;
-  padding: 6px 14px;
+  padding: 8px 16px;
   border-radius: 40px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 600;
+  align-self: flex-start;
 }
 .search-results-info {
   font-size: 0.75rem;
   color: #5f7f9e;
+  min-height: 18px;
 }
 
 /* EXPANDABLE CATEGORY STYLES (unified) */
 .storage-category {
   background: white;
-  border-radius: 32px;
-  margin-bottom: 24px;
+  border-radius: 34px;
+  margin-bottom: 30px;
   overflow: hidden;
-  border: 1px solid #eef2fa;
+  border: 1px solid #e8eef7;
+  box-shadow: 0 16px 42px rgba(31, 47, 62, 0.04);
 }
 .category-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 28px;
+  padding: 24px 30px;
+  gap: 18px;
   cursor: pointer;
   background: white;
   transition: background 0.2s;
@@ -943,24 +974,26 @@ hr { margin: 20px 0 16px; border-top: 1px solid #e9edf2; }
   display: flex;
   align-items: center;
   gap: 14px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 .cat-title i {
-  font-size: 1.9rem;
-  color: #2c7a4d;
+  font-size: 1.85rem;
+  color: #3d7d54;
 }
 .cat-title h2 {
-  font-size: 1.6rem;
-  font-weight: 700;
+  font-size: 1.35rem;
+  font-weight: 800;
 }
 .cat-badge {
-  background: #eef2f9;
+  background: #edf3ff;
   border-radius: 40px;
-  padding: 4px 14px;
-  font-size: 0.8rem;
+  padding: 7px 14px;
+  font-size: 0.88rem;
   font-weight: 600;
 }
 .expand-cat-icon {
-  font-size: 1.3rem;
+  font-size: 1.45rem;
   color: #6b8cae;
   transition: transform 0.3s;
 }
@@ -975,7 +1008,7 @@ hr { margin: 20px 0 16px; border-top: 1px solid #e9edf2; }
 .storage-category.expanded .category-items {
   max-height: 1800px;
   opacity: 1;
-  padding: 8px 24px 24px 24px;
+  padding: 12px 28px 28px;
   border-top-color: #eef2fa;
 }
 .storage-category.expanded .expand-cat-icon {
@@ -983,17 +1016,22 @@ hr { margin: 20px 0 16px; border-top: 1px solid #e9edf2; }
 }
 .food-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-  margin-top: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 24px;
+  margin-top: 10px;
 }
 .food-item-card {
   background: white;
-  border-radius: 24px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
-  border: 1px solid #edf2f8;
-  transition: 0.2s;
+  border-radius: 28px;
+  box-shadow: 0 10px 24px rgba(31, 47, 62, 0.04);
+  border: 1px solid #e7edf6;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   position: relative;
+  overflow: hidden;
+}
+.food-item-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 28px rgba(31, 47, 62, 0.07);
 }
 .food-item-card.selected-for-donation {
   background: #f0f9ef;
@@ -1005,69 +1043,74 @@ hr { margin: 20px 0 16px; border-top: 1px solid #e9edf2; }
 }
 .checkbox-overlay {
   position: absolute;
-  top: 45px;
-  right: 25px;
+  top: 54px;
+  right: 26px;
   z-index: 5;
 }
 .donation-checkbox {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   cursor: pointer;
   accent-color: #2c7a4d;
-  transform: scale(1.1);
 }
 .food-preview {
-  padding: 14px 18px 8px 18px;
+  padding: 20px 20px 10px 20px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 12px;
 }
 .food-name {
-  font-weight: 700;
-  font-size: 1.1rem;
+  font-weight: 800;
+  font-size: 1.12rem;
+  line-height: 1.2;
+  padding-right: 42px;
 }
 .food-volume {
-  background: #f0f4fa;
+  background: #f1f5fa;
   border-radius: 60px;
-  padding: 4px 12px;
-  font-size: 0.7rem;
+  padding: 5px 14px;
+  font-size: 0.84rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 .food-details-mini {
   display: flex;
   gap: 12px;
-  padding: 0 18px 8px;
-  font-size: 0.7rem;
+  padding: 0 20px 12px;
+  font-size: 0.9rem;
   color: #577190;
   flex-wrap: wrap;
 }
 .food-extra-actions {
   display: flex;
   gap: 12px;
-  padding: 10px 18px 18px;
+  padding: 14px 20px 20px;
   border-top: 1px solid #eff3f8;
-  margin-top: 6px;
+  margin-top: 12px;
+  flex-wrap: wrap;
 }
 .mini-btn {
-  background: #f1f5f9;
+  background: #f3f6fb;
   border: none;
   border-radius: 40px;
-  padding: 6px 14px;
-  font-size: 0.7rem;
+  padding: 9px 16px;
+  font-size: 0.9rem;
   font-weight: 500;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   cursor: pointer;
+  flex: 0 1 auto;
 }
-.delete-btn { background: #fee9e7; color: #bc5a4c; }
-.use-btn { background: #eef2ff; color: #2c5282; }
+.delete-item { color: #111827; }
+.use-item { color: #173b67; }
 .donate-mini { background: #e0f2e9; color: #2a7f49; }
 .expiry-warning {
   background: #fff0e0;
   border-radius: 20px;
-  padding: 2px 10px;
-  font-size: 0.7rem;
+  padding: 4px 10px;
+  font-size: 0.82rem;
   font-weight: 600;
   color: #c2591e;
 }
@@ -1106,42 +1149,35 @@ footer {
   font-size: 0.7rem;
   color: #6c86a3;
 }
-@media (max-width: 780px) {
-  .sidebar { flex: 0 0 100%; }
-  .dashboard { flex-direction: column; }
-}
-
-/* RIGHT SIDEBAR */
 .right-sidebar {
-  position: fixed;
-  top: 24px;
-  right: 20px;
-  width: 230px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  z-index: 999;
+  gap: 18px;
+  position: sticky;
+  top: 24px;
 }
 
 .right-box {
   background: white;
-  border-radius: 20px;
-  padding: 16px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+  border-radius: 28px;
+  padding: 18px;
+  box-shadow: 0 16px 42px rgba(31, 47, 62, 0.05);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
 .right-btn {
-  background: #f1f5f9;
+  background: #f3f6fb;
   border: none;
-  padding: 10px;
+  padding: 13px 16px;
   border-radius: 40px;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   font-weight: 500;
   cursor: pointer;
   transition: 0.2s;
+  width: 100%;
+  justify-content: flex-start;
 }
 
 .right-btn:hover {
@@ -1154,27 +1190,23 @@ footer {
 }
 
 .floating-add {
-  background: #0d6100;
-  height: 80px;
+  background: #2f6f18;
+  min-height: 96px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
-  border-radius: 20px;
+  font-size: 2.4rem;
+  border-radius: 28px;
   cursor: pointer;
-  color: white;
+  color: #0b2742;
   font-weight: bold;
-}
-
-/* kasih ruang biar ga ketiban sidebar kanan */
-.main-content {
-  margin-right: 220px;
+  box-shadow: 0 18px 45px rgba(31, 47, 62, 0.08);
 }
 
 /* usage progress bar */
 .usage-bar {
   width: 100%;
-  height: clamp(6px, 0.6vw, 10px);
+  height: 12px;
   background: #e6edf5;
   border-radius: 999px;
   overflow: hidden;
@@ -1192,15 +1224,15 @@ footer {
 .usage-fill.full { background: #8b8b8b; }
 
 .quantity-label {
-  font-size: 0.75rem;
+  font-size: 0.88rem;
   font-weight: 600;
   text-transform: uppercase;
   margin-top: 0px;
   display: inline-block;
-  padding: 3px 12px;
-  border-radius: 12px;
-  margin-left: 18px;
-  margin-bottom: 8px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  margin-left: 20px;
+  margin-bottom: 10px;
 }
 
 .quantity-label.low { background: #fee2e2; color: #dc2626; }
@@ -1374,12 +1406,328 @@ footer {
   color: #374151;
 }
 
-.food-preview,
-.food-details-mini,
 .usage-bar,
-.quantity-label,
-.food-extra-actions {
-  padding-left: 18px;
-  padding-right: 18px;
+.quantity-label {
+  margin-left: 20px;
+}
+
+.usage-bar {
+  width: calc(100% - 40px);
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+@media (max-width: 1320px) {
+  .dashboard {
+    grid-template-columns: 232px minmax(0, 1fr) 248px;
+    gap: 22px;
+  }
+
+  .food-grid {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+}
+
+@media (max-width: 1120px) {
+  .dashboard {
+    grid-template-columns: 232px minmax(0, 1fr);
+  }
+
+  .top-bar {
+    padding: 18px 24px;
+  }
+
+  .top-bar-actions {
+    min-width: 100%;
+    justify-content: stretch;
+  }
+
+  .search-wrapper {
+    flex: 1;
+  }
+
+  .right-sidebar {
+    grid-column: 1 / -1;
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    align-items: start;
+  }
+}
+
+@media (max-width: 920px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar,
+  .right-sidebar {
+    position: static;
+  }
+
+  .sidebar {
+    padding: 22px 18px;
+  }
+
+  .logo-area {
+    margin-bottom: 24px;
+  }
+
+  .top-bar {
+    border-radius: 28px;
+  }
+
+  .top-bar-actions {
+    width: 100%;
+  }
+
+  .food-grid {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
+  }
+
+  .right-sidebar {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 780px) {
+  .manage-inventory-page {
+    padding: 14px;
+  }
+
+  .dashboard {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .sidebar {
+    border-radius: 26px;
+    padding: 18px 16px;
+  }
+
+  .logo-icon {
+    width: 42px;
+    height: 42px;
+    font-size: 21px;
+  }
+
+  .logo-text {
+    font-size: 1.32rem;
+  }
+
+  .nav-item {
+    padding: 12px 14px;
+    font-size: 0.92rem;
+  }
+
+  .top-bar {
+    padding: 16px 18px;
+    border-radius: 24px;
+  }
+
+  .page-title h2 {
+    font-size: 1.7rem;
+  }
+
+  .top-bar-actions {
+    gap: 10px;
+  }
+
+  .search-wrapper {
+    min-width: 0;
+    width: 100%;
+    min-height: 46px;
+  }
+
+  .action-icons {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+  }
+
+  .food-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .category-header {
+    padding: 18px 20px;
+    align-items: flex-start;
+  }
+
+  .storage-category.expanded .category-items {
+    padding: 10px 14px 18px;
+  }
+
+  .cat-title {
+    gap: 10px;
+  }
+
+  .cat-title h2 {
+    font-size: 1.15rem;
+  }
+
+  .cat-badge {
+    padding: 6px 12px;
+    font-size: 0.78rem;
+  }
+
+  .food-item-card {
+    border-radius: 22px;
+  }
+
+  .food-preview {
+    padding: 18px 18px 10px;
+    flex-wrap: wrap;
+  }
+
+  .food-name {
+    font-size: 1rem;
+    padding-right: 0;
+    width: 100%;
+  }
+
+  .food-details-mini {
+    padding: 0 18px 12px;
+    font-size: 0.82rem;
+  }
+
+  .checkbox-overlay {
+    top: 18px;
+    right: 18px;
+  }
+
+  .donation-checkbox {
+    width: 24px;
+    height: 24px;
+  }
+
+  .usage-bar {
+    width: calc(100% - 36px);
+    margin-left: 18px;
+    margin-right: 18px;
+  }
+
+  .quantity-label {
+    margin-left: 18px;
+  }
+
+  .food-extra-actions {
+    padding: 14px 18px 18px;
+    gap: 10px;
+  }
+
+  .mini-btn {
+    flex: 1 1 calc(50% - 10px);
+    justify-content: center;
+  }
+
+  .food-details-mini,
+  .food-extra-actions {
+    font-size: 0.82rem;
+  }
+
+  .right-sidebar {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .right-box {
+    border-radius: 22px;
+    padding: 16px;
+  }
+
+  .floating-add {
+    min-height: 76px;
+    font-size: 2rem;
+    border-radius: 22px;
+  }
+}
+
+@media (max-width: 560px) {
+  .manage-inventory-page {
+    padding: 12px;
+  }
+
+  .top-bar {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .page-title h2 {
+    font-size: 1.45rem;
+  }
+
+  .top-bar-actions {
+    flex-wrap: wrap;
+  }
+
+  .action-icons {
+    margin-left: auto;
+  }
+
+  .category-header {
+    padding: 16px;
+  }
+
+  .cat-title i {
+    font-size: 1.45rem;
+  }
+
+  .expand-cat-icon {
+    font-size: 1.2rem;
+  }
+
+  .food-preview,
+  .food-details-mini,
+  .food-extra-actions {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .usage-bar {
+    width: calc(100% - 32px);
+    margin-left: 16px;
+    margin-right: 16px;
+  }
+
+  .quantity-label {
+    margin-left: 16px;
+    font-size: 0.8rem;
+  }
+
+  .mini-btn {
+    flex-basis: 100%;
+  }
+
+  .row {
+    grid-template-columns: 1fr;
+  }
+
+  .row input[type="text"] {
+    grid-column: span 1;
+  }
+
+  .storage-select {
+    flex-wrap: wrap;
+  }
+
+  .storage-btn {
+    min-width: calc(50% - 5px);
+  }
+
+  .modal-box {
+    padding: 20px;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .modal-cancel,
+  .modal-add {
+    width: 100%;
+  }
 }
 </style>
