@@ -4,7 +4,7 @@
       <!-- Sidebar -->
       <aside class="sidebar">
         <div class="logo-area">
-          <div class="logo-icon"><i class="far fa-utensils"></i></div>
+          <div class="logo-icon"><i class="bi bi-cup-straw"></i></div>
           <div class="logo-text">PantryPal</div>
         </div>
         <nav>
@@ -28,13 +28,13 @@
           <div class="page-title"><h2>Dashboard</h2></div>
           <div class="top-bar-actions">
             <div class="search-wrapper">
-              <i class="far fa-search"></i>
+              <i class="bi bi-search"></i>
               <input type="text" placeholder="Search food, donations, meals..." />
             </div>
             <div class="action-icons">
-              <i class="far fa-bell"></i>
-              <i class="far fa-cog"></i>
-              <i class="far fa-sign-out-alt"></i>
+              <i class="bi bi-bell"></i>
+              <i class="bi bi-gear"></i>
+              <i class="bi bi-box-arrow-right"></i>
             </div>
           </div>
         </div>
@@ -50,7 +50,7 @@
           <!-- Expiry Alerts -->
           <div class="dashboard-card alert-card">
             <div class="card-header">
-              <i class="far fa-exclamation-triangle"></i>
+              <i class="bi bi-exclamation-triangle"></i>
               <span>Expiry Alerts</span>
             </div>
             <div class="alert-list">
@@ -62,7 +62,7 @@
           <!-- Inventory Summary -->
           <div class="dashboard-card inventory-card">
             <div class="card-header">
-              <i class="far fa-box-open"></i>
+              <i class="bi bi-box-seam"></i>
               <span>Inventory</span>
             </div>
             <div class="inventory-list">
@@ -81,13 +81,13 @@
           <!-- Meal Plan Summary -->
           <div class="dashboard-card meal-card">
             <div class="card-header">
-              <i class="far fa-calendar-alt"></i>
+              <i class="bi bi-calendar"></i>
               <span>This Week's Meal Plan</span>
             </div>
             <div class="meal-nav">
-              <button class="meal-nav-btn"><i class="far fa-chevron-left"></i></button>
+              <button class="meal-nav-btn"><i class="bi bi-chevron-left"></i></button>
               <span class="meal-day-title">Monday, 14 Apr</span>
-              <button class="meal-nav-btn"><i class="far fa-chevron-right"></i></button>
+              <button class="meal-nav-btn"><i class="bi bi-chevron-right"></i></button>
             </div>
             <div class="meal-slot">
               <div class="meal-slot-label">Breakfast</div>
@@ -107,7 +107,7 @@
           <!-- Recommendations -->
           <div class="dashboard-card reco-card">
             <div class="card-header">
-              <i class="far fa-lightbulb"></i>
+              <i class="bi bi-lightbulb"></i>
               <span>Try Out</span>
             </div>
             <div class="reco-label">Based on expiring items</div>
@@ -118,7 +118,7 @@
           <!-- Food Saved Progress -->
           <div class="dashboard-card progress-card">
             <div class="card-header">
-              <i class="far fa-chart-line"></i>
+              <i class="bi bi-graph-up"></i>
               <span>Food Saved This Month</span>
             </div>
             <div class="progress-wrapper">
@@ -141,9 +141,9 @@
           <div class="bulk-select-controls">
             <span class="selection-count">Quick Actions</span>
           </div>
-          <button class="right-btn"><i class="far fa-plus-circle"></i> Add Food Item</button>
-          <button class="right-btn"><i class="far fa-hand-holding-heart"></i> Donate Items</button>
-          <button class="right-btn"><i class="far fa-calendar-plus"></i> Plan Meal</button>
+          <button class="right-btn"><i class="bi bi-plus-circle"></i> Add Food Item</button>
+          <button class="right-btn"><i class="bi bi-heart"></i> Donate Items</button>
+          <button class="right-btn"><i class="bi bi-calendar-plus"></i> Plan Meal</button>
         </div>
 
         <div class="right-box">
@@ -185,12 +185,12 @@ const router = useRouter()
 const route = useRoute()
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', route: '/', icon: 'far fa-chart-line' },
-  { label: 'Inventory', route: '/inventory', icon: 'fa-solid fa-box-open' },
-  { label: 'Meal Plan', route: '/meal-plan', icon: 'far fa-calendar-alt' },
-  { label: 'Donation', route: '/donations', icon: 'far fa-hand-holding-heart' },
-  { label: 'Analytics', route: '/analytics', icon: 'far fa-chart-pie' },
-  { label: 'Settings', route: '/settings', icon: 'far fa-cog' },
+  { label: 'Dashboard', route: '/', icon: 'bi bi-graph-up' },
+  { label: 'Inventory', route: '/inventory', icon: 'bi bi-box-seam' },
+  { label: 'Meal Plan', route: '/meal-plan', icon: 'bi bi-calendar' },
+  { label: 'Donation', route: '/donations', icon: 'bi bi-heart' },
+  { label: 'Analytics', route: '/analytics', icon: 'bi bi-pie-chart' },
+  { label: 'Settings', route: '/settings', icon: 'bi bi-gear' },
 ]
 
 const isActive = (itemRoute: string) => {
@@ -234,6 +234,10 @@ const inventoryItems = ref<InventoryItem[]>([
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+.bi {
+  -webkit-text-stroke: 1.1px currentColor;
 }
 
 .dashboard-page {

@@ -128,12 +128,12 @@ interface DonationItem {
 const router = useRouter()
 
 const navItems = ref([
-  { label: 'Dashboard', active: false, route: '/', icon: 'fas fa-chart-line' },
-  { label: 'Inventory', active: false, route: '/inventory', icon: 'fas fa-box-open' },
-  { label: 'Meal Plan', active: false, route: '/meal-plan', icon: 'fas fa-calendar-alt' },
-  { label: 'Donation', active: true, route: '/donations', icon: 'fas fa-hand-holding-heart' },
-  { label: 'Analytics', active: false, route: '/analytics', icon: 'fas fa-chart-pie' },
-  { label: 'Settings', active: false, route: '/settings', icon: 'fas fa-cog' },
+  { label: 'Dashboard', active: false, route: '/', icon: 'bi bi-graph-up' },
+  { label: 'Inventory', active: false, route: '/inventory', icon: 'bi bi-box-seam' },
+  { label: 'Meal Plan', active: false, route: '/meal-plan', icon: 'bi bi-calendar' },
+  { label: 'Donation', active: true, route: '/donations', icon: 'bi bi-heart' },
+  { label: 'Analytics', active: false, route: '/analytics', icon: 'bi bi-pie-chart' },
+  { label: 'Settings', active: false, route: '/settings', icon: 'bi bi-gear' },
 ])
 
 const searchQuery = ref('')

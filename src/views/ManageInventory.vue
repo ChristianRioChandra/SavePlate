@@ -218,7 +218,7 @@
           <div class="page-title"><h2>Manage Inventory</h2></div>
           <div class="top-bar-actions">
             <div class="search-wrapper">
-              <i class="fas fa-search"></i>
+              <i class="bi bi-search" style="-webkit-text-stroke: 1px currentColor"></i>
               <input
                 type="text"
                 v-model="searchQuery"
@@ -226,7 +226,7 @@
                 autocomplete="off"
               />
             </div>
-            <div class="action-icons"><i class="fas fa-sliders-h"></i></div>
+            <div class="action-icons"><i class="bi bi-sliders"></i></div>
           </div>
         </div>
 
@@ -238,11 +238,11 @@
         >
           <div class="category-header" @click="toggleCategory('all')">
             <div class="cat-title">
-              <i class="fas fa-boxes"></i>
+              <i class="bi bi-box"></i>
               <h2>All Storage</h2>
               <div class="cat-badge">{{ getCategoryCount('all') }} items</div>
             </div>
-            <div class="expand-cat-icon"><i class="fas fa-chevron-down"></i></div>
+            <div class="expand-cat-icon"><i class="bi bi-chevron-down"></i></div>
           </div>
           <div class="category-items">
             <div class="food-grid" data-category="all" id="allGrid">
@@ -273,11 +273,11 @@
                 </div>
                 <div class="food-details-mini">
                   <span v-if="item.expiryDays <= 3" class="expiry-warning"
-                    ><i class="fas fa-exclamation-triangle"></i> expires in
+                    ><i class="bi bi-exclamation-triangle"></i> expires in
                     {{ item.expiryDays }}d</span
                   >
-                  <span v-else><i class="fas fa-clock"></i> Exp: {{ item.expiryDays }} days</span>
-                  <span><i class="fas fa-map-marker-alt"></i> {{ item.location }}</span>
+                  <span v-else><i class="bi bi-clock"></i> Exp: {{ item.expiryDays }} days</span>
+                  <span><i class="bi bi-geo-alt"></i> {{ item.location }}</span>
                 </div>
                 <div class="usage-bar">
                   <div
@@ -299,7 +299,7 @@
                     <i class="fas fa-trash"></i> Delete
                   </button>
                   <button class="mini-btn use-item" @click="openUseModal(item.id)">
-                    <i class="fas fa-check"></i> Use
+                    <i class="bi bi-check"></i> Use
                   </button>
                   <button class="mini-btn donate-mini" @click="singleDonate(item.id)">
                     <i class="fas fa-hand-holding-heart"></i> Donate
@@ -318,11 +318,11 @@
         >
           <div class="category-header" @click="toggleCategory('fridge')">
             <div class="cat-title">
-              <i class="fas fa-temperature-low"></i>
+              <i class="bi bi-thermometer-low"></i>
               <h2>Fridge</h2>
               <div class="cat-badge">{{ getCategoryCount('fridge') }} items</div>
             </div>
-            <div class="expand-cat-icon"><i class="fas fa-chevron-down"></i></div>
+            <div class="expand-cat-icon"><i class="bi bi-chevron-down"></i></div>
           </div>
           <div class="category-items">
             <div class="food-grid" data-category="fridge" id="fridgeGrid">
@@ -353,11 +353,11 @@
                 </div>
                 <div class="food-details-mini">
                   <span v-if="item.expiryDays <= 3" class="expiry-warning"
-                    ><i class="fas fa-exclamation-triangle"></i> expires in
+                    ><i class="bi bi-exclamation-triangle"></i> expires in
                     {{ item.expiryDays }}d</span
                   >
-                  <span v-else><i class="fas fa-clock"></i> Exp: {{ item.expiryDays }} days</span>
-                  <span><i class="fas fa-map-marker-alt"></i> {{ item.location }}</span>
+                  <span v-else><i class="bi bi-clock"></i> Exp: {{ item.expiryDays }} days</span>
+                  <span><i class="bi bi-geo-alt"></i> {{ item.location }}</span>
                 </div>
                 <div class="usage-bar">
                   <div
@@ -379,7 +379,7 @@
                     <i class="fas fa-trash"></i> Delete
                   </button>
                   <button class="mini-btn use-item" @click="openUseModal(item.id)">
-                    <i class="fas fa-check"></i> Use
+                    <i class="bi bi-check"></i> Use
                   </button>
                   <button class="mini-btn donate-mini" @click="singleDonate(item.id)">
                     <i class="fas fa-hand-holding-heart"></i> Donate
@@ -398,11 +398,11 @@
         >
           <div class="category-header" @click="toggleCategory('pantry')">
             <div class="cat-title">
-              <i class="fas fa-cabinet-filing"></i>
+              <i class="bi bi-filing"></i>
               <h2>Pantry</h2>
               <div class="cat-badge">{{ getCategoryCount('pantry') }} items</div>
             </div>
-            <div class="expand-cat-icon"><i class="fas fa-chevron-down"></i></div>
+            <div class="expand-cat-icon"><i class="bi bi-chevron-down"></i></div>
           </div>
           <div class="category-items">
             <div class="food-grid" data-category="pantry" id="pantryGrid">
@@ -433,11 +433,11 @@
                 </div>
                 <div class="food-details-mini">
                   <span v-if="item.expiryDays <= 3" class="expiry-warning"
-                    ><i class="fas fa-exclamation-triangle"></i> expires in
+                    ><i class="bi bi-exclamation-triangle"></i> expires in
                     {{ item.expiryDays }}d</span
                   >
-                  <span v-else><i class="fas fa-clock"></i> Exp: {{ item.expiryDays }} days</span>
-                  <span><i class="fas fa-map-marker-alt"></i> {{ item.location }}</span>
+                  <span v-else><i class="bi bi-clock"></i> Exp: {{ item.expiryDays }} days</span>
+                  <span><i class="bi bi-geo-alt"></i> {{ item.location }}</span>
                 </div>
                 <div class="usage-bar">
                   <div
@@ -459,7 +459,7 @@
                     <i class="fas fa-trash"></i> Delete
                   </button>
                   <button class="mini-btn use-item" @click="openUseModal(item.id)">
-                    <i class="fas fa-check"></i> Use
+                    <i class="bi bi-check"></i> Use
                   </button>
                   <button class="mini-btn donate-mini" @click="singleDonate(item.id)">
                     <i class="fas fa-hand-holding-heart"></i> Donate
@@ -478,11 +478,11 @@
         >
           <div class="category-header" @click="toggleCategory('freezer')">
             <div class="cat-title">
-              <i class="fas fa-snowflake"></i>
+              <i class="bi bi-snow"></i>
               <h2>Freezer</h2>
               <div class="cat-badge">{{ getCategoryCount('freezer') }} items</div>
             </div>
-            <div class="expand-cat-icon"><i class="fas fa-chevron-down"></i></div>
+            <div class="expand-cat-icon"><i class="bi bi-chevron-down"></i></div>
           </div>
           <div class="category-items">
             <div class="food-grid" data-category="freezer" id="freezerGrid">
@@ -513,11 +513,11 @@
                 </div>
                 <div class="food-details-mini">
                   <span v-if="item.expiryDays <= 3" class="expiry-warning"
-                    ><i class="fas fa-exclamation-triangle"></i> expires in
+                    ><i class="bi bi-exclamation-triangle"></i> expires in
                     {{ item.expiryDays }}d</span
                   >
-                  <span v-else><i class="fas fa-clock"></i> Exp: {{ item.expiryDays }} days</span>
-                  <span><i class="fas fa-map-marker-alt"></i> {{ item.location }}</span>
+                  <span v-else><i class="bi bi-clock"></i> Exp: {{ item.expiryDays }} days</span>
+                  <span><i class="bi bi-geo-alt"></i> {{ item.location }}</span>
                 </div>
                 <div class="usage-bar">
                   <div
@@ -539,7 +539,7 @@
                     <i class="fas fa-trash"></i> Delete
                   </button>
                   <button class="mini-btn use-item" @click="openUseModal(item.id)">
-                    <i class="fas fa-check"></i> Use
+                    <i class="bi bi-check"></i> Use
                   </button>
                   <button class="mini-btn donate-mini" @click="singleDonate(item.id)">
                     <i class="fas fa-hand-holding-heart"></i> Donate
@@ -558,11 +558,11 @@
         >
           <div class="category-header" @click="toggleCategory('counter')">
             <div class="cat-title">
-              <i class="fas fa-blender"></i>
+              <i class="bi bi-tornado"></i>
               <h2>Countertop</h2>
               <div class="cat-badge">{{ getCategoryCount('counter') }} items</div>
             </div>
-            <div class="expand-cat-icon"><i class="fas fa-chevron-down"></i></div>
+            <div class="expand-cat-icon"><i class="bi bi-chevron-down"></i></div>
           </div>
           <div class="category-items">
             <div class="food-grid" data-category="counter" id="counterGrid">
@@ -593,11 +593,11 @@
                 </div>
                 <div class="food-details-mini">
                   <span v-if="item.expiryDays <= 3" class="expiry-warning"
-                    ><i class="fas fa-exclamation-triangle"></i> expires in
+                    ><i class="bi bi-exclamation-triangle"></i> expires in
                     {{ item.expiryDays }}d</span
                   >
-                  <span v-else><i class="fas fa-clock"></i> Exp: {{ item.expiryDays }} days</span>
-                  <span><i class="fas fa-map-marker-alt"></i> {{ item.location }}</span>
+                  <span v-else><i class="bi bi-clock"></i> Exp: {{ item.expiryDays }} days</span>
+                  <span><i class="bi bi-geo-alt"></i> {{ item.location }}</span>
                 </div>
                 <div class="usage-bar">
                   <div
@@ -619,7 +619,7 @@
                     <i class="fas fa-trash"></i> Delete
                   </button>
                   <button class="mini-btn use-item" @click="openUseModal(item.id)">
-                    <i class="fas fa-check"></i> Use
+                    <i class="bi bi-check"></i> Use
                   </button>
                   <button class="mini-btn donate-mini" @click="singleDonate(item.id)">
                     <i class="fas fa-hand-holding-heart"></i> Donate
@@ -638,11 +638,11 @@
         >
           <div class="category-header" @click="toggleCategory('expiry')">
             <div class="cat-title">
-              <i class="fas fa-hourglass-half"></i>
+              <i class="bi bi-hourglass-split"></i>
               <h2>Near Expiry</h2>
               <div class="cat-badge">{{ getNearExpiryCount() }} items</div>
             </div>
-            <div class="expand-cat-icon"><i class="fas fa-chevron-down"></i></div>
+            <div class="expand-cat-icon"><i class="bi bi-chevron-down"></i></div>
           </div>
           <div class="category-items">
             <div class="food-grid" id="expiryGrid">
@@ -673,11 +673,11 @@
                 </div>
                 <div class="food-details-mini">
                   <span v-if="item.expiryDays <= 3" class="expiry-warning"
-                    ><i class="fas fa-exclamation-triangle"></i> expires in
+                    ><i class="bi bi-exclamation-triangle"></i> expires in
                     {{ item.expiryDays }}d</span
                   >
-                  <span v-else><i class="fas fa-clock"></i> Exp: {{ item.expiryDays }} days</span>
-                  <span><i class="fas fa-map-marker-alt"></i> {{ item.location }}</span>
+                  <span v-else><i class="bi bi-clock"></i> Exp: {{ item.expiryDays }} days</span>
+                  <span><i class="bi bi-geo-alt"></i> {{ item.location }}</span>
                 </div>
                 <div class="usage-bar">
                   <div
@@ -699,7 +699,7 @@
                     <i class="fas fa-trash"></i> Delete
                   </button>
                   <button class="mini-btn use-item" @click="openUseModal(item.id)">
-                    <i class="fas fa-check"></i> Use
+                    <i class="bi bi-check"></i> Use
                   </button>
                   <button class="mini-btn donate-mini" @click="singleDonate(item.id)">
                     <i class="fas fa-hand-holding-heart"></i> Donate
@@ -724,19 +724,19 @@
               >{{ selectedDonationIds.size }} selected</span
             >
             <button class="right-btn" id="selectAllBtn" @click="selectAllVisible">
-              <i class="fas fa-check-double"></i> Select All
+              <i class="bi bi-check2-all"></i> Select All
             </button>
             <button class="right-btn" id="clearSelectionBtn" @click="clearAllSelections">
-              <i class="fas fa-times"></i> Clear
+              <i class="bi bi-x"></i> Clear
             </button>
             <span class="search-results-info" id="searchResultsInfo">{{ searchResultsInfo }}</span>
           </div>
 
           <button class="right-btn" id="filterBtn" @click="cycleFilterMode">
-            <i class="fas fa-filter"></i> Filter: {{ getFilterLabel(currentFilter) }}
+            <i class="bi bi-funnel"></i> Filter: {{ getFilterLabel(currentFilter) }}
           </button>
           <button class="right-btn" id="sortBtn" @click="cycleSortMode">
-            <i class="fas fa-sort"></i> Sort: {{ getSortLabel(currentSort) }}
+            <i class="bi bi-arrow-down-up"></i> Sort: {{ getSortLabel(currentSort) }}
           </button>
         </div>
 
@@ -752,7 +752,7 @@
         </div>
 
         <div class="right-box">
-          <button class="right-btn"><i class="fas fa-bolt"></i> Meal Plan</button>
+          <button class="right-btn"><i class="bi bi-lightning"></i> Meal Plan</button>
         </div>
 
         <div class="floating-add" id="addRight" @click="openAddModal">+</div>
