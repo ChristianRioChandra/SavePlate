@@ -1,45 +1,15 @@
 <template>
   <div class="dashboard-page">
     <div class="dashboard">
-      <!-- Sidebar -->
-      <aside class="sidebar">
-        <div class="logo-area">
-          <div class="logo-icon"><i class="bi bi-cup-straw"></i></div>
-          <div class="logo-text">PantryPal</div>
-        </div>
-        <nav>
-          <div
-            v-for="item in navItems"
-            :key="item.label"
-            class="nav-item"
-            :class="{ active: isActive(item.route) }"
-            @click="navigateTo(item.route)"
-          >
-            <i :class="item.icon"></i>
-            <span>{{ item.label }}</span>
-          </div>
-        </nav>
-        <hr />
-      </aside>
+      <BaseSidebar :nav-items="navItems" />
 
-      <!-- Main Content -->
       <div class="main-content">
-        <div class="top-bar">
-          <div class="page-title"><h2>Dashboard</h2></div>
-          <div class="top-bar-actions">
-            <div class="search-wrapper">
-              <i class="bi bi-search"></i>
-              <input type="text" placeholder="Search food, donations, meals..." />
-            </div>
-            <div class="action-icons">
-              <i class="bi bi-bell"></i>
-              <i class="bi bi-gear"></i>
-              <i class="bi bi-box-arrow-right"></i>
-            </div>
-          </div>
-        </div>
+        <BaseTopbar
+          title="Dashboard"
+          search-placeholder="Search food, donations, meals..."
+          v-model:search-value="searchQuery"
+        />
 
-        <!-- Dashboard Cards Grid -->
         <div class="dashboard-grid">
           <!-- Welcome Card -->
           <div class="dashboard-card welcome-card">
@@ -135,41 +105,17 @@
         </div>
       </div>
 
-      <!-- Right Sidebar -->
-      <aside class="right-sidebar">
-        <div class="right-box">
-          <div class="bulk-select-controls">
-            <span class="selection-count">Quick Actions</span>
-          </div>
-          <button class="right-btn"><i class="bi bi-plus-circle"></i> Add Food Item</button>
-          <button class="right-btn"><i class="bi bi-heart"></i> Donate Items</button>
-          <button class="right-btn"><i class="bi bi-calendar-plus"></i> Plan Meal</button>
-        </div>
-
-        <div class="right-box">
-          <div class="stat-item">
-            <span>Total items</span>
-            <strong>{{ inventoryItems.length }}</strong>
-          </div>
-          <div class="stat-item">
-            <span>Expiring soon</span>
-            <strong class="warning">3</strong>
-          </div>
-        </div>
-      </aside>
+      <BaseRightSidebar :total-items="inventoryItems.length" :expiring-soon="3" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-
-interface NavItem {
-  label: string
-  route: string
-  icon: string
-}
+import BaseSidebar from '@/components/BaseSidebar.vue'
+import BaseTopbar from '@/components/BaseTopbar.vue'
+import BaseRightSidebar from '@/components/BaseRightSidebar.vue'
+import type { NavItem } from '@/components/BaseSidebar.vue'
 
 interface InventoryItem {
   id: number
@@ -181,8 +127,7 @@ interface InventoryItem {
   warning?: boolean
 }
 
-const router = useRouter()
-const route = useRoute()
+const searchQuery = ref('')
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', route: '/', icon: 'bi bi-graph-up' },
@@ -192,13 +137,6 @@ const navItems: NavItem[] = [
   { label: 'Analytics', route: '/analytics', icon: 'bi bi-pie-chart' },
   { label: 'Settings', route: '/settings', icon: 'bi bi-gear' },
 ]
-
-const isActive = (itemRoute: string) => {
-  if (itemRoute === '/') return route.path === '/'
-  return route.path.startsWith(itemRoute)
-}
-
-const navigateTo = (routePath: string) => router.push(routePath)
 
 const inventoryItems = ref<InventoryItem[]>([
   {
