@@ -69,12 +69,14 @@
     <div v-if="addModalOpen" class="modal-overlay" style="display: flex">
       <div class="modal-box">
         <h2>Add New Food Item</h2>
+        <label class="field-label" for="expiryDate">Expiry Date</label>
 
         <input type="text" v-model="newItem.name" placeholder="Name" />
         <input type="text" v-model="newItem.desc" placeholder="Short Description" />
 
         <div class="row">
           <div class="field-stack">
+
             <label class="field-label" for="expiryDate">Expiry Date</label>
             <input
               id="expiryDate"
@@ -94,50 +96,50 @@
               {{ newItemExpiryLabel }}
             </div>
           </div>
-          <select v-model="selectedStorage">
-            <option value="fridge">Fridge</option>
-            <option value="pantry">Pantry</option>
-            <option value="freezer">Freezer</option>
-            <option value="counter">Countertop</option>
-          </select>
-          <input type="text" v-model="newItem.volume" placeholder="Qty" />
+
+          <!-- STORAGE SELECT -->
+
+
+          <div class="storage-select">
+
+            <button
+              class="storage-btn"
+              :class="{ active: selectedStorage === 'freezer' }"
+              data-type="freezer"
+              @click="selectedStorage = 'freezer'"
+            >
+              Freezer
+            </button>
+            <button
+              class="storage-btn"
+              :class="{ active: selectedStorage === 'pantry' }"
+              data-type="pantry"
+              @click="selectedStorage = 'pantry'"
+            >
+             Pantry
+            </button>
+            <button
+              class="storage-btn"
+              :class="{ active: selectedStorage === 'fridge' }"
+              data-type="fridge"
+              @click="selectedStorage = 'fridge'"
+            >
+              Fridge
+            </button>
+            <button
+              class="storage-btn"
+              :class="{ active: selectedStorage === 'counter' }"
+              data-type="counter"
+              @click="selectedStorage = 'counter'"
+            >
+              Countertop
+            </button>
+          </div>
         </div>
 
         <!-- STORAGE SELECT -->
-        <div class="storage-select">
-          <button
-            class="storage-btn"
-            :class="{ active: selectedStorage === 'freezer' }"
-            data-type="freezer"
-            @click="selectedStorage = 'freezer'"
-          >
-            Freezer
-          </button>
-          <button
-            class="storage-btn"
-            :class="{ active: selectedStorage === 'pantry' }"
-            data-type="pantry"
-            @click="selectedStorage = 'pantry'"
-          >
-            Pantry
-          </button>
-          <button
-            class="storage-btn"
-            :class="{ active: selectedStorage === 'fridge' }"
-            data-type="fridge"
-            @click="selectedStorage = 'fridge'"
-          >
-            Fridge
-          </button>
-          <button
-            class="storage-btn"
-            :class="{ active: selectedStorage === 'counter' }"
-            data-type="counter"
-            @click="selectedStorage = 'counter'"
-          >
-            Countertop
-          </button>
-        </div>
+        <label class="field-label" for="expiryDate">Item Quantity</label>
+        <input type="text" v-model="newItem.volume" placeholder="Qty" />
 
         <div>
           <p style="font-size: 0.85rem; font-weight: 600; margin-top: 10px">Quantity Level</p>
@@ -197,21 +199,7 @@
 
     <div class="dashboard">
       <!-- Sidebar -->
-      <aside class="sidebar">
-        <div class="logo">🌿 PantryPal</div>
-        <nav>
-          <div
-            v-for="item in navItems"
-            :key="item.label"
-            class="nav-item"
-            :class="{ active: isActive(item.route) }"
-            @click="navigateTo(item.route)"
-          >
-            <span class="nav-dot"></span>
-            {{ item.label }}
-          </div>
-        </nav>
-      </aside>
+      <BaseSidebar :nav-items="navItems" />
 
       <div class="main-content">
         <div class="top-bar">
@@ -296,13 +284,13 @@
                 }}</span>
                 <div class="food-extra-actions">
                   <button class="mini-btn delete-item" @click="deleteItem(item.id)">
-                    <i class="fas fa-trash"></i> Delete
+                    <i class="bi bi-trash"></i> Delete
                   </button>
                   <button class="mini-btn use-item" @click="openUseModal(item.id)">
                     <i class="bi bi-check"></i> Use
                   </button>
                   <button class="mini-btn donate-mini" @click="singleDonate(item.id)">
-                    <i class="fas fa-hand-holding-heart"></i> Donate
+                    <i class="bi bi-gift"></i> Donate
                   </button>
                 </div>
               </div>
@@ -376,13 +364,13 @@
                 }}</span>
                 <div class="food-extra-actions">
                   <button class="mini-btn delete-item" @click="deleteItem(item.id)">
-                    <i class="fas fa-trash"></i> Delete
+                    <i class="bi bi-trash"></i> Delete
                   </button>
                   <button class="mini-btn use-item" @click="openUseModal(item.id)">
                     <i class="bi bi-check"></i> Use
                   </button>
                   <button class="mini-btn donate-mini" @click="singleDonate(item.id)">
-                    <i class="fas fa-hand-holding-heart"></i> Donate
+                    <i class="bi bi-gift"></i> Donate
                   </button>
                 </div>
               </div>
@@ -398,7 +386,7 @@
         >
           <div class="category-header" @click="toggleCategory('pantry')">
             <div class="cat-title">
-              <i class="bi bi-filing"></i>
+              <i class="bi bi-bookshelf"></i>
               <h2>Pantry</h2>
               <div class="cat-badge">{{ getCategoryCount('pantry') }} items</div>
             </div>
@@ -456,13 +444,13 @@
                 }}</span>
                 <div class="food-extra-actions">
                   <button class="mini-btn delete-item" @click="deleteItem(item.id)">
-                    <i class="fas fa-trash"></i> Delete
+                    <i class="bi bi-trash"></i> Delete
                   </button>
                   <button class="mini-btn use-item" @click="openUseModal(item.id)">
                     <i class="bi bi-check"></i> Use
                   </button>
                   <button class="mini-btn donate-mini" @click="singleDonate(item.id)">
-                    <i class="fas fa-hand-holding-heart"></i> Donate
+                    <i class="bi bi-gift"></i> Donate
                   </button>
                 </div>
               </div>
@@ -536,13 +524,13 @@
                 }}</span>
                 <div class="food-extra-actions">
                   <button class="mini-btn delete-item" @click="deleteItem(item.id)">
-                    <i class="fas fa-trash"></i> Delete
+                    <i class="bi bi-trash"></i> Delete
                   </button>
                   <button class="mini-btn use-item" @click="openUseModal(item.id)">
                     <i class="bi bi-check"></i> Use
                   </button>
                   <button class="mini-btn donate-mini" @click="singleDonate(item.id)">
-                    <i class="fas fa-hand-holding-heart"></i> Donate
+                    <i class="bi bi-gift"></i> Donate
                   </button>
                 </div>
               </div>
@@ -558,7 +546,7 @@
         >
           <div class="category-header" @click="toggleCategory('counter')">
             <div class="cat-title">
-              <i class="bi bi-tornado"></i>
+              <i class="bi bi-cup-hot"></i>
               <h2>Countertop</h2>
               <div class="cat-badge">{{ getCategoryCount('counter') }} items</div>
             </div>
@@ -616,13 +604,13 @@
                 }}</span>
                 <div class="food-extra-actions">
                   <button class="mini-btn delete-item" @click="deleteItem(item.id)">
-                    <i class="fas fa-trash"></i> Delete
+                    <i class="bi bi-trash"></i> Delete
                   </button>
                   <button class="mini-btn use-item" @click="openUseModal(item.id)">
                     <i class="bi bi-check"></i> Use
                   </button>
                   <button class="mini-btn donate-mini" @click="singleDonate(item.id)">
-                    <i class="fas fa-hand-holding-heart"></i> Donate
+                    <i class="bi bi-gift"></i> Donate
                   </button>
                 </div>
               </div>
@@ -638,7 +626,7 @@
         >
           <div class="category-header" @click="toggleCategory('expiry')">
             <div class="cat-title">
-              <i class="bi bi-hourglass-split"></i>
+              <i class="bi bi-exclamation-triangle"></i>
               <h2>Near Expiry</h2>
               <div class="cat-badge">{{ getNearExpiryCount() }} items</div>
             </div>
@@ -696,13 +684,13 @@
                 }}</span>
                 <div class="food-extra-actions">
                   <button class="mini-btn delete-item" @click="deleteItem(item.id)">
-                    <i class="fas fa-trash"></i> Delete
+                    <i class="bi bi-trash"></i> Delete
                   </button>
                   <button class="mini-btn use-item" @click="openUseModal(item.id)">
                     <i class="bi bi-check"></i> Use
                   </button>
                   <button class="mini-btn donate-mini" @click="singleDonate(item.id)">
-                    <i class="fas fa-hand-holding-heart"></i> Donate
+                    <i class="bi bi-gift"></i> Donate
                   </button>
                 </div>
               </div>
@@ -729,7 +717,6 @@
             <button class="right-btn" id="clearSelectionBtn" @click="clearAllSelections">
               <i class="bi bi-x"></i> Clear
             </button>
-            <span class="search-results-info" id="searchResultsInfo">{{ searchResultsInfo }}</span>
           </div>
 
           <button class="right-btn" id="filterBtn" @click="cycleFilterMode">
@@ -747,7 +734,7 @@
             :disabled="selectedDonationIds.size === 0"
             @click="bulkDonateAction"
           >
-            <i class="fas fa-hand-holding-heart"></i> Donate Selected
+            <i class="bi bi-gift"></i> Donate Selected
           </button>
         </div>
 
@@ -762,35 +749,21 @@
 </template>
 
 <script setup lang="ts">
+import BaseSidebar from '@/components/BaseSidebar.vue'
+import type { NavItem } from '@/components/BaseSidebar.vue'
+
 import { ref, computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
 
 // ---------- Navigation (same as other pages) ----------
-interface NavItem {
-  label: string
-  route: string
-}
-
-const router = useRouter()
-const route = useRoute()
 
 const navItems = ref<NavItem[]>([
-  { label: 'Dashboard', route: '/' },
-  { label: 'Inventory', route: '/inventory' },
-  { label: 'Meal Plan', route: '/meal-plan' },
-  { label: 'Donation', route: '/donations' },
-  { label: 'Analytics', route: '/analytics' },
-  { label: 'Settings', route: '/settings' },
+  { label: 'Dashboard', route: '/', icon: 'bi bi-graph-up' },
+  { label: 'Inventory', route: '/inventory', icon: 'bi bi-box-seam' },
+  { label: 'Meal Plan', route: '/meal-plan', icon: 'bi bi-calendar' },
+  { label: 'Donation', route: '/donations', icon: 'bi bi-heart' },
+  { label: 'Analytics', route: '/analytics', icon: 'bi bi-pie-chart' },
+  { label: 'Settings', route: '/settings', icon: 'bi bi-gear' },
 ])
-
-const isActive = (itemRoute: string) => {
-  if (itemRoute === '/') return route.path === '/'
-  return route.path.startsWith(itemRoute)
-}
-
-const navigateTo = (routePath: string) => {
-  router.push(routePath)
-}
 
 // ---------- Inventory Data & Logic (converted from Options API) ----------
 interface InventoryItem {
@@ -879,13 +852,6 @@ const qtyMap: Record<QuantityLevel, { percent: string; color: string; label: str
 }
 
 // ---------- Computed ----------
-const searchResultsInfo = computed(() => {
-  if (searchQuery.value) {
-    const count = getFilteredAndSortedItems('all').length
-    return `found ${count} matching`
-  }
-  return ''
-})
 
 const qtyProgress = computed(() => qtyMap[selectedQuantityLevel.value])
 
@@ -1384,12 +1350,20 @@ hr {
   opacity: 0.6;
 }
 .selection-count {
-  background: #eef2ff;
+  background: transparent;
   padding: 8px 16px;
   border-radius: 40px;
+  outline: #2a7f49 1px solid;
   font-size: 0.82rem;
   font-weight: 600;
   align-self: flex-start;
+
+  padding: 12px 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  justify-content: center;
 }
 .search-results-info {
   font-size: 0.75rem;
@@ -1655,12 +1629,25 @@ footer {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.4rem;
+  font-size: 3.4rem;
   border-radius: 28px;
   cursor: pointer;
-  color: #0b2742;
+  color: #f3f3f3;
   font-weight: bold;
   box-shadow: 0 18px 45px rgba(31, 47, 62, 0.08);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.floating-add:hover {
+  background: #255a13; /* Darkens the green slightly */
+  box-shadow: 0 12px 35px rgba(31, 47, 62, 0.12); /* Pulls the shadow in slightly tighter */
+}
+
+.floating-add:active {
+  background: #255a13; /* Darker green on press */
+  transform: translateY(2px) scale(0.98); /* Pushes down and shrinks slightly */
+  box-shadow: 0 8px 20px rgba(31, 47, 62, 0.05); /* Flattens the shadow */
+  transition: all 0.1s ease; /* Faster transition for the click action */
 }
 
 /* usage progress bar */
@@ -1722,7 +1709,7 @@ footer {
 
 .quantity-selector {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   margin: 20px 0;
 }
@@ -1807,24 +1794,28 @@ footer {
   align-items: center;
   justify-content: center;
   z-index: 9999;
+  padding: 16px;
+  overflow-y: auto;
 }
 
 .modal-box {
   background: white;
   border-radius: 28px;
   padding: 28px;
-  width: 480px;
-  max-width: 90%;
+  width: 100%;
+  max-width: 480px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
   gap: 14px;
+  margin: auto;
 }
 
 .modal-box h2 {
   text-align: center;
   font-weight: 700;
   margin-bottom: 10px;
+  font-size: 1.35rem;
 }
 
 .modal-box input,
@@ -1835,6 +1826,7 @@ footer {
   font-family: 'Inter';
   outline: none;
   font-size: 0.9rem;
+  min-height: 44px;
 }
 
 .modal-box input:focus,
@@ -1908,19 +1900,26 @@ footer {
 }
 
 .storage-select {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(70px, 0.5fr));
   gap: 10px;
   margin-top: 10px;
 }
 
 .storage-btn {
-  flex: 1;
   padding: 10px;
   border-radius: 14px;
   border: none;
   background: #f1f5f9;
   cursor: pointer;
   font-size: 0.85rem;
+  font-weight: 500;
+  min-height: 44px;
+  transition: all 0.2s;
+}
+
+.storage-btn:hover {
+  background: #e2e8f0;
 }
 
 .storage-btn.active {
@@ -1931,24 +1930,42 @@ footer {
 .modal-actions {
   display: flex;
   justify-content: space-between;
+  gap: 12px;
   margin-top: 14px;
+  flex-wrap: wrap;
 }
 
 .modal-cancel {
   background: #eef2f8;
   border: none;
-  padding: 10px 18px;
+  padding: 12px 24px;
   border-radius: 40px;
   cursor: pointer;
+  font-weight: 500;
+  flex: 1;
+  min-height: 44px;
+  transition: all 0.2s;
+}
+
+.modal-cancel:hover {
+  background: #e0e7f1;
 }
 
 .modal-add {
   background: #2c7a4d;
   color: white;
   border: none;
-  padding: 10px 22px;
+  padding: 12px 24px;
   border-radius: 40px;
   cursor: pointer;
+  font-weight: 600;
+  flex: 1;
+  min-height: 44px;
+  transition: all 0.2s;
+}
+
+.modal-add:hover {
+  background: #1f5a38;
 }
 
 .qty-progress-wrapper {
@@ -2061,11 +2078,34 @@ footer {
   .right-sidebar {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
+
+  .modal-box {
+    max-width: 90vw;
+  }
 }
 
 @media (max-width: 780px) {
   .manage-inventory-page {
     padding: 14px;
+  }
+
+  .modal-overlay {
+    padding: 14px;
+  }
+
+  .modal-box {
+    padding: 24px;
+    border-radius: 24px;
+  }
+
+  .modal-box h2 {
+    font-size: 1.25rem;
+  }
+
+  .modal-box input,
+  .modal-box select {
+    padding: 11px 14px;
+    font-size: 16px;
   }
 
   .dashboard {
@@ -2221,6 +2261,77 @@ footer {
     padding: 12px;
   }
 
+  .modal-overlay {
+    padding: 12px;
+  }
+
+  .modal-box {
+    padding: 20px;
+    border-radius: 22px;
+    gap: 12px;
+  }
+
+  .modal-box h2 {
+    font-size: 1.15rem;
+    margin-bottom: 8px;
+  }
+
+  .modal-box input,
+  .modal-box select {
+    padding: 11px 14px;
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  .row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .row input[type='text'] {
+    grid-column: span 1;
+  }
+
+  .field-stack {
+    grid-column: span 1;
+  }
+
+  .storage-select {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .storage-btn {
+    padding: 10px 8px;
+    font-size: 0.8rem;
+    min-height: 42px;
+  }
+
+  .quantity-selector {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin: 16px 0;
+  }
+
+  .qty-option {
+    padding: 12px 10px;
+    font-size: 0.9rem;
+  }
+
+  .modal-actions {
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .modal-cancel,
+  .modal-add {
+    padding: 11px 16px;
+    border-radius: 35px;
+    font-size: 0.95rem;
+    min-height: 42px;
+  }
+
   .top-bar {
     padding: 14px;
     gap: 12px;
@@ -2270,40 +2381,6 @@ footer {
 
   .mini-btn {
     flex-basis: 100%;
-  }
-
-  .row {
-    grid-template-columns: 1fr;
-  }
-
-  .field-stack {
-    grid-column: span 1;
-  }
-
-  .row input[type='text'] {
-    grid-column: span 1;
-  }
-
-  .storage-select {
-    flex-wrap: wrap;
-  }
-
-  .storage-btn {
-    min-width: calc(50% - 5px);
-  }
-
-  .modal-box {
-    padding: 20px;
-  }
-
-  .modal-actions {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .modal-cancel,
-  .modal-add {
-    width: 100%;
   }
 }
 </style>
