@@ -69,15 +69,37 @@
     <div v-if="addModalOpen" class="modal-overlay" style="display: flex">
       <div class="modal-box">
         <h2>Add New Food Item</h2>
-        <label class="field-label" for="expiryDate">Expiry Date</label>
 
-        <input type="text" v-model="newItem.name" placeholder="Name" />
-        <input type="text" v-model="newItem.desc" placeholder="Short Description" />
+        <div class="form-section">
+          <label class="field-label"
+            >Food Item Title <span class="char-count">({{ newItem.name.length }}/30)</span></label
+          >
+          <input
+            type="text"
+            v-model="newItem.name"
+            placeholder="Enter food item name"
+            maxlength="30"
+            class="form-input"
+          />
+        </div>
 
-        <div class="row">
-          <div class="field-stack">
+        <div class="form-section">
+          <label class="field-label"
+            >Short Description
+            <span class="char-count">({{ newItem.description.length }}/180)</span></label
+          >
+          <textarea
+            v-model="newItem.description"
+            placeholder="Brief description of the food item"
+            maxlength="180"
+            class="form-textarea"
+            rows="3"
+          ></textarea>
+        </div>
 
-            <label class="field-label" for="expiryDate">Expiry Date</label>
+        <div class="form-row expiry-row">
+          <div class="form-section">
+            <label class="field-label">Expiry Date</label>
             <input
               id="expiryDate"
               v-model="newItem.expiryDate"
@@ -86,64 +108,78 @@
               type="date"
               :min="todayDate"
             />
-            <div
-              class="expiry-preview"
-              :class="{
-                empty: !newItem.expiryDate,
-                urgent: newItemExpiryDays !== null && newItemExpiryDays <= 3,
-              }"
-            >
-              {{ newItemExpiryLabel }}
-            </div>
           </div>
+          <div class="expiry-preview expiry-summary"
+            :class="{
+              empty: !newItem.expiryDate,
+              urgent: newItemExpiryDays !== null && newItemExpiryDays <= 3,
+            }"
+          >
+            {{ newItemExpiryLabel }}
+          </div>
+        </div>
 
-          <!-- STORAGE SELECT -->
+        <div class="form-row">
+          <div class="form-section">
+            <label class="field-label">Food Type</label>
+            <select v-model="newItem.foodType" class="form-input">
+              <option v-for="type in foodTypeOptions" :key="type" :value="type">
+                {{ type }}
+              </option>
+            </select>
+          </div>
+          <div class="form-section">
+            <label class="field-label"
+              >Volume/Quantity
+              <span class="char-count">({{ newItem.volume.length }}/10)</span></label>
+            <input
+              type="text"
+              v-model="newItem.volume"
+              placeholder="e.g., 500ml, 1kg, 12 pieces"
+              maxlength="10"
+              class="form-input"
+            />
+          </div>
+        </div>
 
 
+
+        <div class="form-section">
+          <label class="field-label">Storage Location</label>
           <div class="storage-select">
-
+            <button
+              class="storage-btn"
+              :class="{ active: selectedStorage === 'fridge' }"
+              @click="selectedStorage = 'fridge'"
+            >
+              <i class="bi bi-thermometer-low"></i> Fridge
+            </button>
             <button
               class="storage-btn"
               :class="{ active: selectedStorage === 'freezer' }"
-              data-type="freezer"
               @click="selectedStorage = 'freezer'"
             >
-              Freezer
+              <i class="bi bi-snow"></i> Freezer
             </button>
             <button
               class="storage-btn"
               :class="{ active: selectedStorage === 'pantry' }"
-              data-type="pantry"
               @click="selectedStorage = 'pantry'"
             >
-             Pantry
-            </button>
-            <button
-              class="storage-btn"
-              :class="{ active: selectedStorage === 'fridge' }"
-              data-type="fridge"
-              @click="selectedStorage = 'fridge'"
-            >
-              Fridge
+              <i class="bi bi-bookshelf"></i> Pantry
             </button>
             <button
               class="storage-btn"
               :class="{ active: selectedStorage === 'counter' }"
-              data-type="counter"
               @click="selectedStorage = 'counter'"
             >
-              Countertop
+              <i class="bi bi-cup-hot"></i> Countertop
             </button>
           </div>
         </div>
 
-        <!-- STORAGE SELECT -->
-        <label class="field-label" for="expiryDate">Item Quantity</label>
-        <input type="text" v-model="newItem.volume" placeholder="Qty" />
-
-        <div>
-          <p style="font-size: 0.85rem; font-weight: 600; margin-top: 10px">Quantity Level</p>
-
+        <div class="form-section">
+          <label class="field-label">Quantity Level</label>
           <div class="qty-progress-wrapper">
             <div class="qty-progress-bar">
               <div
@@ -158,7 +194,6 @@
             <div
               class="qty-option low"
               :class="{ selected: selectedQuantityLevel === 'low' }"
-              data-level="low"
               @click="setQuantityLevel('low')"
             >
               Low
@@ -166,7 +201,6 @@
             <div
               class="qty-option half"
               :class="{ selected: selectedQuantityLevel === 'half' }"
-              data-level="half"
               @click="setQuantityLevel('half')"
             >
               Half
@@ -174,7 +208,6 @@
             <div
               class="qty-option high"
               :class="{ selected: selectedQuantityLevel === 'high' }"
-              data-level="high"
               @click="setQuantityLevel('high')"
             >
               High
@@ -182,7 +215,6 @@
             <div
               class="qty-option full"
               :class="{ selected: selectedQuantityLevel === 'full' }"
-              data-level="full"
               @click="setQuantityLevel('full')"
             >
               Full
@@ -227,7 +259,7 @@
           <div class="category-header" @click="toggleCategory('all')">
             <div class="cat-title">
               <i class="bi bi-box"></i>
-              <h2>All Storage</h2>
+              <h2>All Category</h2>
               <div class="cat-badge">{{ getCategoryCount('all') }} items</div>
             </div>
             <div class="expand-cat-icon"><i class="bi bi-chevron-down"></i></div>
@@ -244,7 +276,7 @@
                 }"
                 :data-food-id="item.id"
                 :data-food-name="item.name"
-                :data-search-terms="`${item.name} ${item.volume} ${item.searchTerms}`"
+                :data-search-terms="`${item.name} ${item.volume} ${item.foodType} ${item.description} ${item.searchTerms}`"
                 :data-category="item.category"
               >
                 <div class="checkbox-overlay">
@@ -255,33 +287,57 @@
                     @change="toggleDonationSelection(item.id)"
                   />
                 </div>
-                <div class="food-preview">
-                  <span class="food-name">{{ escapeHtml(item.name) }}</span>
-                  <span class="food-volume">{{ item.volume }}</span>
+
+                <div class="card-header">
+                  <div class="card-title-section">
+                    <h3 class="food-title">{{ escapeHtml(item.name) }}</h3>
+
+                    <div class="row3">
+                      <span v-if="item.expiryDays <= 3" class="expiry-badge urgent">
+                        <i class="bi bi-exclamation-triangle"></i> expires in {{ item.expiryDays }}d
+                      </span>
+
+                      <span v-else class="expiry-badge">
+                        <i class="bi bi-clock"></i> {{ item.expiryDays }}d left
+                      </span>
+
+                      <span class="tag storage-tag">{{ item.category }}</span>
+                      <span class="tag type-tag">{{ item.foodType }}</span>
+                    </div>
+                  </div>
+                  <div class="card-badges">
+                    <span class="volume-badge">{{ item.volume }}</span>
+                  </div>
                 </div>
-                <div class="food-details-mini">
-                  <span v-if="item.expiryDays <= 3" class="expiry-warning"
-                    ><i class="bi bi-exclamation-triangle"></i> expires in
-                    {{ item.expiryDays }}d</span
-                  >
-                  <span v-else><i class="bi bi-clock"></i> Exp: {{ item.expiryDays }} days</span>
-                  <span><i class="bi bi-geo-alt"></i> {{ item.location }}</span>
+
+                <p class="food-description">{{ item.description }}</p>
+
+                <div class="card-meta">
+                  <div class="storage-tags"></div>
                 </div>
-                <div class="usage-bar">
-                  <div
-                    class="usage-fill"
-                    :class="item.quantityLevel || 'high'"
-                    :style="{
-                      width:
-                        quantityWidths[item.quantityLevel as keyof typeof quantityWidths] ||
-                        quantityWidths.high,
-                    }"
-                  ></div>
+
+                <div class="row2">
+                  <div class="quantity-level-label-wrapper">
+                    <span class="quantity-label" :class="item.quantityLevel || 'high'">{{
+                      quantityLabels[item.quantityLevel as keyof typeof quantityLabels] ||
+                      quantityLabels.high
+                    }}</span>
+                  </div>
+                  <div class="quantity-level-label-wrapper">
+                    <div class="usage-bar">
+                      <div
+                        class="usage-fill"
+                        :class="item.quantityLevel || 'high'"
+                        :style="{
+                          width:
+                            quantityWidths[item.quantityLevel as keyof typeof quantityWidths] ||
+                            quantityWidths.high,
+                        }"
+                      ></div>
+                    </div>
+                  </div>
                 </div>
-                <span class="quantity-label" :class="item.quantityLevel || 'high'">{{
-                  quantityLabels[item.quantityLevel as keyof typeof quantityLabels] ||
-                  quantityLabels.high
-                }}</span>
+
                 <div class="food-extra-actions">
                   <button class="mini-btn delete-item" @click="deleteItem(item.id)">
                     <i class="bi bi-trash"></i> Delete
@@ -324,7 +380,7 @@
                 }"
                 :data-food-id="item.id"
                 :data-food-name="item.name"
-                :data-search-terms="`${item.name} ${item.volume} ${item.searchTerms}`"
+                :data-search-terms="`${item.name} ${item.volume} ${item.foodType} ${item.description} ${item.searchTerms}`"
                 :data-category="item.category"
               >
                 <div class="checkbox-overlay">
@@ -335,33 +391,57 @@
                     @change="toggleDonationSelection(item.id)"
                   />
                 </div>
-                <div class="food-preview">
-                  <span class="food-name">{{ escapeHtml(item.name) }}</span>
-                  <span class="food-volume">{{ item.volume }}</span>
+
+                <div class="card-header">
+                  <div class="card-title-section">
+                    <h3 class="food-title">{{ escapeHtml(item.name) }}</h3>
+
+                    <div class="row3">
+                      <span v-if="item.expiryDays <= 3" class="expiry-badge urgent">
+                        <i class="bi bi-exclamation-triangle"></i> expires in {{ item.expiryDays }}d
+                      </span>
+
+                      <span v-else class="expiry-badge">
+                        <i class="bi bi-clock"></i> {{ item.expiryDays }}d left
+                      </span>
+
+                      <span class="tag storage-tag">{{ item.category }}</span>
+                      <span class="tag type-tag">{{ item.foodType }}</span>
+                    </div>
+                  </div>
+                  <div class="card-badges">
+                    <span class="volume-badge">{{ item.volume }}</span>
+                  </div>
                 </div>
-                <div class="food-details-mini">
-                  <span v-if="item.expiryDays <= 3" class="expiry-warning"
-                    ><i class="bi bi-exclamation-triangle"></i> expires in
-                    {{ item.expiryDays }}d</span
-                  >
-                  <span v-else><i class="bi bi-clock"></i> Exp: {{ item.expiryDays }} days</span>
-                  <span><i class="bi bi-geo-alt"></i> {{ item.location }}</span>
+
+                <p class="food-description">{{ item.description }}</p>
+
+                <div class="card-meta">
+                  <div class="storage-tags"></div>
                 </div>
-                <div class="usage-bar">
-                  <div
-                    class="usage-fill"
-                    :class="item.quantityLevel || 'high'"
-                    :style="{
-                      width:
-                        quantityWidths[item.quantityLevel as keyof typeof quantityWidths] ||
-                        quantityWidths.high,
-                    }"
-                  ></div>
+
+                <div class="row2">
+                  <div class="quantity-level-label-wrapper">
+                    <span class="quantity-label" :class="item.quantityLevel || 'high'">{{
+                      quantityLabels[item.quantityLevel as keyof typeof quantityLabels] ||
+                      quantityLabels.high
+                    }}</span>
+                  </div>
+                  <div class="quantity-level-label-wrapper">
+                    <div class="usage-bar">
+                      <div
+                        class="usage-fill"
+                        :class="item.quantityLevel || 'high'"
+                        :style="{
+                          width:
+                            quantityWidths[item.quantityLevel as keyof typeof quantityWidths] ||
+                            quantityWidths.high,
+                        }"
+                      ></div>
+                    </div>
+                  </div>
                 </div>
-                <span class="quantity-label" :class="item.quantityLevel || 'high'">{{
-                  quantityLabels[item.quantityLevel as keyof typeof quantityLabels] ||
-                  quantityLabels.high
-                }}</span>
+
                 <div class="food-extra-actions">
                   <button class="mini-btn delete-item" @click="deleteItem(item.id)">
                     <i class="bi bi-trash"></i> Delete
@@ -404,7 +484,7 @@
                 }"
                 :data-food-id="item.id"
                 :data-food-name="item.name"
-                :data-search-terms="`${item.name} ${item.volume} ${item.searchTerms}`"
+                :data-search-terms="`${item.name} ${item.volume} ${item.foodType} ${item.description} ${item.searchTerms}`"
                 :data-category="item.category"
               >
                 <div class="checkbox-overlay">
@@ -415,33 +495,57 @@
                     @change="toggleDonationSelection(item.id)"
                   />
                 </div>
-                <div class="food-preview">
-                  <span class="food-name">{{ escapeHtml(item.name) }}</span>
-                  <span class="food-volume">{{ item.volume }}</span>
+
+                <div class="card-header">
+                  <div class="card-title-section">
+                    <h3 class="food-title">{{ escapeHtml(item.name) }}</h3>
+
+                    <div class="row3">
+                      <span v-if="item.expiryDays <= 3" class="expiry-badge urgent">
+                        <i class="bi bi-exclamation-triangle"></i> expires in {{ item.expiryDays }}d
+                      </span>
+
+                      <span v-else class="expiry-badge">
+                        <i class="bi bi-clock"></i> {{ item.expiryDays }}d left
+                      </span>
+
+                      <span class="tag storage-tag">{{ item.category }}</span>
+                      <span class="tag type-tag">{{ item.foodType }}</span>
+                    </div>
+                  </div>
+                  <div class="card-badges">
+                    <span class="volume-badge">{{ item.volume }}</span>
+                  </div>
                 </div>
-                <div class="food-details-mini">
-                  <span v-if="item.expiryDays <= 3" class="expiry-warning"
-                    ><i class="bi bi-exclamation-triangle"></i> expires in
-                    {{ item.expiryDays }}d</span
-                  >
-                  <span v-else><i class="bi bi-clock"></i> Exp: {{ item.expiryDays }} days</span>
-                  <span><i class="bi bi-geo-alt"></i> {{ item.location }}</span>
+
+                <p class="food-description">{{ item.description }}</p>
+
+                <div class="card-meta">
+                  <div class="storage-tags"></div>
                 </div>
-                <div class="usage-bar">
-                  <div
-                    class="usage-fill"
-                    :class="item.quantityLevel || 'high'"
-                    :style="{
-                      width:
-                        quantityWidths[item.quantityLevel as keyof typeof quantityWidths] ||
-                        quantityWidths.high,
-                    }"
-                  ></div>
+
+                <div class="row2">
+                  <div class="quantity-level-label-wrapper">
+                    <span class="quantity-label" :class="item.quantityLevel || 'high'">{{
+                      quantityLabels[item.quantityLevel as keyof typeof quantityLabels] ||
+                      quantityLabels.high
+                    }}</span>
+                  </div>
+                  <div class="quantity-level-label-wrapper">
+                    <div class="usage-bar">
+                      <div
+                        class="usage-fill"
+                        :class="item.quantityLevel || 'high'"
+                        :style="{
+                          width:
+                            quantityWidths[item.quantityLevel as keyof typeof quantityWidths] ||
+                            quantityWidths.high,
+                        }"
+                      ></div>
+                    </div>
+                  </div>
                 </div>
-                <span class="quantity-label" :class="item.quantityLevel || 'high'">{{
-                  quantityLabels[item.quantityLevel as keyof typeof quantityLabels] ||
-                  quantityLabels.high
-                }}</span>
+
                 <div class="food-extra-actions">
                   <button class="mini-btn delete-item" @click="deleteItem(item.id)">
                     <i class="bi bi-trash"></i> Delete
@@ -484,7 +588,7 @@
                 }"
                 :data-food-id="item.id"
                 :data-food-name="item.name"
-                :data-search-terms="`${item.name} ${item.volume} ${item.searchTerms}`"
+                :data-search-terms="`${item.name} ${item.volume} ${item.foodType} ${item.description} ${item.searchTerms}`"
                 :data-category="item.category"
               >
                 <div class="checkbox-overlay">
@@ -495,33 +599,57 @@
                     @change="toggleDonationSelection(item.id)"
                   />
                 </div>
-                <div class="food-preview">
-                  <span class="food-name">{{ escapeHtml(item.name) }}</span>
-                  <span class="food-volume">{{ item.volume }}</span>
+
+                <div class="card-header">
+                  <div class="card-title-section">
+                    <h3 class="food-title">{{ escapeHtml(item.name) }}</h3>
+
+                    <div class="row3">
+                      <span v-if="item.expiryDays <= 3" class="expiry-badge urgent">
+                        <i class="bi bi-exclamation-triangle"></i> expires in {{ item.expiryDays }}d
+                      </span>
+
+                      <span v-else class="expiry-badge">
+                        <i class="bi bi-clock"></i> {{ item.expiryDays }}d left
+                      </span>
+
+                      <span class="tag storage-tag">{{ item.category }}</span>
+                      <span class="tag type-tag">{{ item.foodType }}</span>
+                    </div>
+                  </div>
+                  <div class="card-badges">
+                    <span class="volume-badge">{{ item.volume }}</span>
+                  </div>
                 </div>
-                <div class="food-details-mini">
-                  <span v-if="item.expiryDays <= 3" class="expiry-warning"
-                    ><i class="bi bi-exclamation-triangle"></i> expires in
-                    {{ item.expiryDays }}d</span
-                  >
-                  <span v-else><i class="bi bi-clock"></i> Exp: {{ item.expiryDays }} days</span>
-                  <span><i class="bi bi-geo-alt"></i> {{ item.location }}</span>
+
+                <p class="food-description">{{ item.description }}</p>
+
+                <div class="card-meta">
+                  <div class="storage-tags"></div>
                 </div>
-                <div class="usage-bar">
-                  <div
-                    class="usage-fill"
-                    :class="item.quantityLevel || 'high'"
-                    :style="{
-                      width:
-                        quantityWidths[item.quantityLevel as keyof typeof quantityWidths] ||
-                        quantityWidths.high,
-                    }"
-                  ></div>
+
+                <div class="row2">
+                  <div class="quantity-level-label-wrapper">
+                    <span class="quantity-label" :class="item.quantityLevel || 'high'">{{
+                      quantityLabels[item.quantityLevel as keyof typeof quantityLabels] ||
+                      quantityLabels.high
+                    }}</span>
+                  </div>
+                  <div class="quantity-level-label-wrapper">
+                    <div class="usage-bar">
+                      <div
+                        class="usage-fill"
+                        :class="item.quantityLevel || 'high'"
+                        :style="{
+                          width:
+                            quantityWidths[item.quantityLevel as keyof typeof quantityWidths] ||
+                            quantityWidths.high,
+                        }"
+                      ></div>
+                    </div>
+                  </div>
                 </div>
-                <span class="quantity-label" :class="item.quantityLevel || 'high'">{{
-                  quantityLabels[item.quantityLevel as keyof typeof quantityLabels] ||
-                  quantityLabels.high
-                }}</span>
+
                 <div class="food-extra-actions">
                   <button class="mini-btn delete-item" @click="deleteItem(item.id)">
                     <i class="bi bi-trash"></i> Delete
@@ -564,7 +692,7 @@
                 }"
                 :data-food-id="item.id"
                 :data-food-name="item.name"
-                :data-search-terms="`${item.name} ${item.volume} ${item.searchTerms}`"
+                :data-search-terms="`${item.name} ${item.volume} ${item.foodType} ${item.description} ${item.searchTerms}`"
                 :data-category="item.category"
               >
                 <div class="checkbox-overlay">
@@ -575,33 +703,57 @@
                     @change="toggleDonationSelection(item.id)"
                   />
                 </div>
-                <div class="food-preview">
-                  <span class="food-name">{{ escapeHtml(item.name) }}</span>
-                  <span class="food-volume">{{ item.volume }}</span>
+
+                <div class="card-header">
+                  <div class="card-title-section">
+                    <h3 class="food-title">{{ escapeHtml(item.name) }}</h3>
+
+                    <div class="row3">
+                      <span v-if="item.expiryDays <= 3" class="expiry-badge urgent">
+                        <i class="bi bi-exclamation-triangle"></i> expires in {{ item.expiryDays }}d
+                      </span>
+
+                      <span v-else class="expiry-badge">
+                        <i class="bi bi-clock"></i> {{ item.expiryDays }}d left
+                      </span>
+
+                      <span class="tag storage-tag">{{ item.category }}</span>
+                      <span class="tag type-tag">{{ item.foodType }}</span>
+                    </div>
+                  </div>
+                  <div class="card-badges">
+                    <span class="volume-badge">{{ item.volume }}</span>
+                  </div>
                 </div>
-                <div class="food-details-mini">
-                  <span v-if="item.expiryDays <= 3" class="expiry-warning"
-                    ><i class="bi bi-exclamation-triangle"></i> expires in
-                    {{ item.expiryDays }}d</span
-                  >
-                  <span v-else><i class="bi bi-clock"></i> Exp: {{ item.expiryDays }} days</span>
-                  <span><i class="bi bi-geo-alt"></i> {{ item.location }}</span>
+
+                <p class="food-description">{{ item.description }}</p>
+
+                <div class="card-meta">
+                  <div class="storage-tags"></div>
                 </div>
-                <div class="usage-bar">
-                  <div
-                    class="usage-fill"
-                    :class="item.quantityLevel || 'high'"
-                    :style="{
-                      width:
-                        quantityWidths[item.quantityLevel as keyof typeof quantityWidths] ||
-                        quantityWidths.high,
-                    }"
-                  ></div>
+
+                <div class="row2">
+                  <div class="quantity-level-label-wrapper">
+                    <span class="quantity-label" :class="item.quantityLevel || 'high'">{{
+                      quantityLabels[item.quantityLevel as keyof typeof quantityLabels] ||
+                      quantityLabels.high
+                    }}</span>
+                  </div>
+                  <div class="quantity-level-label-wrapper">
+                    <div class="usage-bar">
+                      <div
+                        class="usage-fill"
+                        :class="item.quantityLevel || 'high'"
+                        :style="{
+                          width:
+                            quantityWidths[item.quantityLevel as keyof typeof quantityWidths] ||
+                            quantityWidths.high,
+                        }"
+                      ></div>
+                    </div>
+                  </div>
                 </div>
-                <span class="quantity-label" :class="item.quantityLevel || 'high'">{{
-                  quantityLabels[item.quantityLevel as keyof typeof quantityLabels] ||
-                  quantityLabels.high
-                }}</span>
+
                 <div class="food-extra-actions">
                   <button class="mini-btn delete-item" @click="deleteItem(item.id)">
                     <i class="bi bi-trash"></i> Delete
@@ -644,7 +796,7 @@
                 }"
                 :data-food-id="item.id"
                 :data-food-name="item.name"
-                :data-search-terms="`${item.name} ${item.volume} ${item.searchTerms}`"
+                :data-search-terms="`${item.name} ${item.volume} ${item.foodType} ${item.description} ${item.searchTerms}`"
                 :data-category="item.category"
               >
                 <div class="checkbox-overlay">
@@ -655,33 +807,59 @@
                     @change="toggleDonationSelection(item.id)"
                   />
                 </div>
-                <div class="food-preview">
-                  <span class="food-name">{{ escapeHtml(item.name) }}</span>
-                  <span class="food-volume">{{ item.volume }}</span>
+
+                <div class="card-header">
+                  <div class="card-title-section">
+                    <h3 class="food-title">{{ escapeHtml(item.name) }}</h3>
+
+                    <div class="row3">
+                      <span v-if="item.expiryDays <= 3" class="expiry-badge urgent">
+                        <i class="bi bi-exclamation-triangle"></i> expires in {{ item.expiryDays }}d
+                      </span>
+
+                      <span v-else class="expiry-badge">
+                        <i class="bi bi-clock"></i> {{ item.expiryDays }}d left
+                      </span>
+
+                      <span class="tag storage-tag">{{ item.category }}</span>
+                      <span class="tag type-tag">{{ item.foodType }}</span>
+                    </div>
+                  </div>
+                  <div class="card-badges">
+                    <span class="volume-badge">{{ item.volume }}</span>
+                  </div>
                 </div>
-                <div class="food-details-mini">
-                  <span v-if="item.expiryDays <= 3" class="expiry-warning"
-                    ><i class="bi bi-exclamation-triangle"></i> expires in
-                    {{ item.expiryDays }}d</span
-                  >
-                  <span v-else><i class="bi bi-clock"></i> Exp: {{ item.expiryDays }} days</span>
-                  <span><i class="bi bi-geo-alt"></i> {{ item.location }}</span>
+
+                <p class="food-description">{{ item.description }}</p>
+
+                <div class="card-meta">
+                  <div class="storage-tags">
+
+                  </div>
                 </div>
-                <div class="usage-bar">
-                  <div
-                    class="usage-fill"
-                    :class="item.quantityLevel || 'high'"
-                    :style="{
-                      width:
-                        quantityWidths[item.quantityLevel as keyof typeof quantityWidths] ||
-                        quantityWidths.high,
-                    }"
-                  ></div>
+
+                <div class="row2">
+                  <div class="quantity-level-label-wrapper">
+                    <span class="quantity-label" :class="item.quantityLevel || 'high'">{{
+                      quantityLabels[item.quantityLevel as keyof typeof quantityLabels] ||
+                      quantityLabels.high
+                    }}</span>
+                  </div>
+                  <div class="quantity-level-label-wrapper">
+                    <div class="usage-bar">
+                      <div
+                        class="usage-fill"
+                        :class="item.quantityLevel || 'high'"
+                        :style="{
+                          width:
+                            quantityWidths[item.quantityLevel as keyof typeof quantityWidths] ||
+                            quantityWidths.high,
+                        }"
+                      ></div>
+                    </div>
+                  </div>
                 </div>
-                <span class="quantity-label" :class="item.quantityLevel || 'high'">{{
-                  quantityLabels[item.quantityLevel as keyof typeof quantityLabels] ||
-                  quantityLabels.high
-                }}</span>
+
                 <div class="food-extra-actions">
                   <button class="mini-btn delete-item" @click="deleteItem(item.id)">
                     <i class="bi bi-trash"></i> Delete
@@ -769,10 +947,12 @@ const navItems = ref<NavItem[]>([
 interface InventoryItem {
   id: string
   name: string
+  description: string
   volume: string
   location: string
   expiryDays: number
   category: string
+  foodType: string
   searchTerms: string
   quantityLevel: string
 }
@@ -781,20 +961,24 @@ const inventory = ref<InventoryItem[]>([
   {
     id: 'f1',
     name: 'Susu UltraMilk',
+    description: 'Fresh milk, rich in calcium and vitamin D',
     volume: '500ml',
     location: 'Middle shelf',
     expiryDays: 5,
     category: 'fridge',
+    foodType: 'Dairy & Eggs',
     searchTerms: 'milk dairy',
     quantityLevel: 'high',
   },
   {
     id: 'f2',
     name: 'Fresh Spinach',
+    description: 'Organic spinach leaves, great for salads and cooking',
     volume: '200g bag',
     location: 'Veg drawer',
     expiryDays: 2,
     category: 'fridge',
+    foodType: 'Vegetables',
     searchTerms: 'spinach greens',
     quantityLevel: 'low',
   },
@@ -829,11 +1013,28 @@ const selectedStorage = ref('fridge')
 
 const newItem = ref({
   name: '',
-  desc: '',
+  description: '',
   expiryDate: '',
   category: 'fridge',
-  volume: '1 item',
+  volume: '',
+  foodType: 'Other',
 })
+
+const foodTypeOptions = [
+  'Fruits',
+  'Vegetables',
+  'Proteins',
+  'Dairy & Eggs',
+  'Bakery & Grains',
+  'Dry Goods',
+  'Canned goods',
+  'Spices & Seasonings',
+  'Frozen Foods',
+  'Beverages',
+  'Condiments & Snacks',
+  'Meals',
+  'Other',
+]
 
 const quantityWidths = { low: '25%', half: '50%', high: '75%', full: '100%' }
 const quantityLabels = { low: 'Low', half: 'Half', high: 'High', full: 'Full' }
@@ -896,7 +1097,8 @@ function getFilteredAndSortedItems(category: string): InventoryItem[] {
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
     items = items.filter((item) => {
-      const combined = `${item.name} ${item.volume} ${item.searchTerms || ''}`.toLowerCase()
+      const combined =
+        `${item.name} ${item.volume} ${item.foodType} ${item.description} ${item.searchTerms || ''}`.toLowerCase()
       return combined.includes(query)
     })
   }
@@ -927,7 +1129,9 @@ function getCategoryCount(category: string): number {
     if (searchQuery.value) {
       const q = searchQuery.value.toLowerCase()
       items = items.filter((item) =>
-        `${item.name} ${item.volume} ${item.searchTerms}`.toLowerCase().includes(q),
+        `${item.name} ${item.volume} ${item.foodType} ${item.description} ${item.searchTerms}`
+          .toLowerCase()
+          .includes(q),
       )
     }
     return items.length
@@ -1078,13 +1282,14 @@ function openAddModal() {
   const d = String(future.getDate()).padStart(2, '0')
   newItem.value = {
     name: '',
-    desc: '',
+    description: '',
     expiryDate: `${y}-${m}-${d}`,
     category: 'fridge',
-    volume: '1 item',
+    volume: '',
+    foodType: 'Other',
   }
   selectedStorage.value = 'fridge'
-  selectedQuantityLevel.value = 'low'
+  selectedQuantityLevel.value = 'high'
   addModalOpen.value = true
 }
 
@@ -1101,16 +1306,29 @@ function confirmAdd() {
     notifyMessage('Please select an expiry date')
     return
   }
+  if (!newItem.value.volume) {
+    notifyMessage('Please enter a volume/quantity')
+    return
+  }
 
   const expiryDays = calculateDaysUntil(newItem.value.expiryDate)
   const newId = `item_${nextId.value++}`
   inventory.value.push({
     id: newId,
     name: newItem.value.name,
-    volume: newItem.value.volume || '1 item',
-    location: 'Custom',
+    description: newItem.value.description,
+    volume: newItem.value.volume,
+    location:
+      selectedStorage.value === 'fridge'
+        ? 'Fridge'
+        : selectedStorage.value === 'freezer'
+          ? 'Freezer'
+          : selectedStorage.value === 'pantry'
+            ? 'Pantry'
+            : 'Countertop',
     expiryDays,
     category: selectedStorage.value,
+    foodType: newItem.value.foodType,
     searchTerms: newItem.value.name.toLowerCase(),
     quantityLevel: selectedQuantityLevel.value,
   })
@@ -1455,6 +1673,9 @@ hr {
     box-shadow 0.2s ease;
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 380px;
 }
 .food-item-card:hover {
   transform: translateY(-2px);
@@ -1470,16 +1691,146 @@ hr {
 }
 .checkbox-overlay {
   position: absolute;
-  top: 54px;
+  top: 75px;
   right: 26px;
   z-index: 5;
 }
+
 .donation-checkbox {
   width: 28px;
   height: 28px;
   cursor: pointer;
   accent-color: #2c7a4d;
 }
+
+/* NEW CARD STYLES */
+.card-header {
+  padding: 24px 20px 16px;
+  border-bottom: 1px solid #f0f4f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.card-title-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: calc(2 * 1.3em);
+}
+
+.food-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin: 0;
+  color: #0a1c2f;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+#fridgeGrid .food-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+
+}
+
+.expiry-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #48617c;
+  width: max-content;
+}
+
+.expiry-badge.urgent {
+  color: #c2591e;
+  background: #fff1e8;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.card-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.volume-badge {
+  background: #f1f5fa;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: #48617c;
+}
+
+.food-description {
+  height: 60px;
+  padding: 0 20px;
+  font-size: 0.9rem;
+  color: #577190;
+  line-height: 1.4;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  overflow: hidden;
+  min-height: 42px;
+}
+
+.card-meta {
+  padding: 12px 20px;
+}
+
+.storage-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tag {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.storage-tag {
+  background: #e6f3eb;
+  color: #1f5a38;
+  text-transform: capitalize;
+}
+
+.type-tag {
+  background: #f0e6ff;
+  color: #5a2a7f;
+}
+
+.quantity-section {
+  padding: 12px 20px;
+}
+
+.quantity-level-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #16a34a;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 8px;
+}
+
 .food-preview {
   padding: 20px 20px 10px 20px;
   display: flex;
@@ -1487,12 +1838,14 @@ hr {
   align-items: flex-start;
   gap: 12px;
 }
+
 .food-name {
   font-weight: 800;
   font-size: 1.12rem;
   line-height: 1.2;
   padding-right: 42px;
 }
+
 .food-volume {
   background: #f1f5fa;
   border-radius: 60px;
@@ -1516,6 +1869,7 @@ hr {
   border-top: 1px solid #eff3f8;
   margin-top: 12px;
   flex-wrap: wrap;
+  justify-content: center;
 }
 .mini-btn {
   background: #f3f6fb;
@@ -1801,21 +2155,21 @@ footer {
 .modal-box {
   background: white;
   border-radius: 28px;
-  padding: 28px;
+  padding: 30px 32px;
   width: 100%;
-  max-width: 480px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+  max-width: 520px;
+  box-shadow: 0 28px 60px rgba(0, 0, 0, 0.12);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
   margin: auto;
 }
 
 .modal-box h2 {
   text-align: center;
-  font-weight: 700;
-  margin-bottom: 10px;
-  font-size: 1.35rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+  font-size: 1.75rem;
 }
 
 .modal-box input,
@@ -1835,6 +2189,83 @@ footer {
   box-shadow: 0 0 0 3px rgba(44, 122, 77, 0.12);
 }
 
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2c3e4e;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  outline: none;
+  min-height: 44px;
+  transition: all 0.2s;
+}
+
+.form-input:focus {
+  border-color: #2c7a4d;
+  box-shadow: 0 0 0 3px rgba(44, 122, 77, 0.12);
+}
+
+.form-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  outline: none;
+  resize: vertical;
+  transition: all 0.2s;
+}
+
+.form-textarea:focus {
+  border-color: #2c7a4d;
+  box-shadow: 0 0 0 3px rgba(44, 122, 77, 0.12);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.form-row.expiry-row {
+  grid-template-columns: minmax(0, 2.5fr) minmax(180px, 1fr);
+  align-items: end;
+}
+
+.expiry-summary {
+  min-height: 78px;
+  padding: 16px 18px;
+  background: #f4fbf5;
+  border-radius: 18px;
+  color: #1f4d25;
+  font-size: 0.92rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.char-count {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
 .field-stack {
   display: flex;
   flex-direction: column;
@@ -1842,14 +2273,18 @@ footer {
 }
 
 .field-label {
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   font-weight: 600;
-  color: #48617c;
+  color: #2c3e4e;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .date-input {
   color: #15314f;
   background: #fff;
+  border-radius: 18px;
 }
 
 .date-input.has-date {
@@ -1891,6 +2326,31 @@ footer {
   gap: 10px;
 }
 
+.row2 {
+  display: grid;
+  grid-template-columns: 0.1fr 1.6fr;
+  gap: 10px;
+}
+
+.row3 {
+  padding-top: 10px;
+  display: flex;
+  grid-template-columns: 1.5fr 1.5fr 1.5fr;
+  gap: 10px;
+}
+
+.row4 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 .row > * {
   min-width: 0;
 }
@@ -1901,21 +2361,26 @@ footer {
 
 .storage-select {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(70px, 0.5fr));
-  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
   margin-top: 10px;
 }
 
 .storage-btn {
-  padding: 10px;
-  border-radius: 14px;
-  border: none;
-  background: #f1f5f9;
+  padding: 14px 12px;
+  border-radius: 18px;
+  border: 1px solid transparent;
+  background: #f8fafc;
   cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 500;
-  min-height: 44px;
-  transition: all 0.2s;
+  font-size: 0.9rem;
+  font-weight: 600;
+  min-height: 52px;
+  transition: all 0.2s ease;
+  white-space: normal;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .storage-btn:hover {
@@ -2103,9 +2568,49 @@ footer {
   }
 
   .modal-box input,
-  .modal-box select {
+  .modal-box select,
+  .modal-box textarea {
     padding: 11px 14px;
     font-size: 16px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .card-header {
+    padding: 18px 16px 12px;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .card-title-section {
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: calc(2 * 1.3em);
+  }
+
+  .food-title {
+    font-size: 1.1rem;
+  }
+
+  .food-description {
+    padding: 0 16px;
+    font-size: 0.85rem;
+    min-height: 36px;
+  }
+
+  .card-meta {
+    padding: 10px 16px;
+  }
+
+  .quantity-section {
+    padding: 10px 16px;
+  }
+
+  .food-extra-actions {
+    padding: 12px 16px 16px;
   }
 
   .dashboard {
@@ -2188,22 +2693,6 @@ footer {
     border-radius: 22px;
   }
 
-  .food-preview {
-    padding: 18px 18px 10px;
-    flex-wrap: wrap;
-  }
-
-  .food-name {
-    font-size: 1rem;
-    padding-right: 0;
-    width: 100%;
-  }
-
-  .food-details-mini {
-    padding: 0 18px 12px;
-    font-size: 0.82rem;
-  }
-
   .checkbox-overlay {
     top: 18px;
     right: 18px;
@@ -2215,28 +2704,19 @@ footer {
   }
 
   .usage-bar {
-    width: calc(100% - 36px);
-    margin-left: 18px;
-    margin-right: 18px;
+    width: calc(100% - 32px);
+    margin-left: 16px;
+    margin-right: 16px;
   }
 
   .quantity-label {
-    margin-left: 18px;
-  }
-
-  .food-extra-actions {
-    padding: 14px 18px 18px;
-    gap: 10px;
+    margin-left: 16px;
+    font-size: 0.8rem;
   }
 
   .mini-btn {
     flex: 1 1 calc(50% - 10px);
     justify-content: center;
-  }
-
-  .food-details-mini,
-  .food-extra-actions {
-    font-size: 0.82rem;
   }
 
   .right-sidebar {
@@ -2276,24 +2756,25 @@ footer {
     margin-bottom: 8px;
   }
 
+  .form-section {
+    gap: 6px;
+  }
+
   .modal-box input,
-  .modal-box select {
+  .modal-box select,
+  .modal-box textarea {
     padding: 11px 14px;
     font-size: 16px;
     min-height: 44px;
   }
 
-  .row {
+  .form-row {
     grid-template-columns: 1fr;
     gap: 8px;
   }
 
-  .row input[type='text'] {
-    grid-column: span 1;
-  }
-
-  .field-stack {
-    grid-column: span 1;
+  .form-label {
+    font-size: 0.85rem;
   }
 
   .storage-select {
@@ -2332,6 +2813,62 @@ footer {
     min-height: 42px;
   }
 
+  .card-header {
+    padding: 16px 14px 10px;
+  }
+
+  .food-title {
+    font-size: 1rem;
+  }
+
+  .expiry-badge {
+    font-size: 0.8rem;
+  }
+
+  .volume-badge {
+    font-size: 0.8rem;
+    padding: 5px 10px;
+  }
+
+  .food-description {
+    padding: 0 14px;
+    font-size: 0.8rem;
+    min-height: 32px;
+  }
+
+  .card-meta {
+    padding: 8px 14px;
+  }
+
+  .tag {
+    padding: 5px 10px;
+    font-size: 0.75rem;
+  }
+
+  .quantity-section {
+    padding: 8px 14px;
+  }
+
+  .quantity-level-label {
+    font-size: 0.75rem;
+    margin-bottom: 6px;
+  }
+
+  .usage-bar {
+    height: 10px;
+  }
+
+  .food-extra-actions {
+    padding: 12px 14px 14px;
+    gap: 8px;
+  }
+
+  .mini-btn {
+    flex: 1;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+
   .top-bar {
     padding: 14px;
     gap: 12px;
@@ -2361,26 +2898,19 @@ footer {
     font-size: 1.2rem;
   }
 
-  .food-preview,
-  .food-details-mini,
-  .food-extra-actions {
-    padding-left: 16px;
-    padding-right: 16px;
+  .checkbox-overlay {
+    top: 14px;
+    right: 14px;
   }
 
-  .usage-bar {
-    width: calc(100% - 32px);
-    margin-left: 16px;
-    margin-right: 16px;
+  .donation-checkbox {
+    width: 22px;
+    height: 22px;
   }
 
-  .quantity-label {
-    margin-left: 16px;
-    font-size: 0.8rem;
-  }
-
-  .mini-btn {
-    flex-basis: 100%;
+  .right-sidebar {
+    grid-template-columns: 1fr;
+    gap: 14px;
   }
 }
 </style>
