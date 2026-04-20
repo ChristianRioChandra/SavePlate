@@ -1629,6 +1629,8 @@ hr {
 
 .layout-toggle-bar {
   width: 100%;
+  display: flex;
+  justify-content: center;
   margin: -14px 0 24px;
 }
 
@@ -1772,7 +1774,7 @@ hr {
   padding: 8px 8px;
   min-height: 68px;
   box-shadow: 0 6px 12px rgba(31, 47, 62, 0.03);
-  min-width: 0;
+  min-width: max-content;
 }
 
 .compact-food-item.urgent {
@@ -1793,7 +1795,6 @@ hr {
 }
 
 .compact-food-main {
-  min-width: 0;
   border: none;
   background: transparent;
   padding: 0;
