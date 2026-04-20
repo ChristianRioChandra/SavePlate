@@ -1,9 +1,13 @@
 // firebase.js
 
 import { initializeApp } from 'firebase/app'
-import { getAnalytics } from 'firebase/analytics'
+// import { getAnalytics } from 'firebase/analytics'
 import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from 'firebase/firestore'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -19,8 +23,15 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 
 // Initialize Services
-export const analytics = getAnalytics(app)
+// export const analytics = getAnalytics(app)
 export const auth = getAuth(app)
-export const db = getFirestore(app)
+// export const db = getFirestore(app)
+
+// Use initializeFirestore instead of getFirestore — enables persistent cache
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager(), // supports multiple browser tabs
+  }),
+})
 
 export default app

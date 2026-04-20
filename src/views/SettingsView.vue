@@ -9,8 +9,8 @@
             <p class="hero-kicker">Preferences</p>
             <h1>Settings Page</h1>
             <p class="hero-copy">
-              Manage security, listing visibility, and account details with the same PantryPal
-              look and feel used across the rest of the app.
+              Manage security, listing visibility, and account details with the same PantryPal look
+              and feel used across the rest of the app.
             </p>
           </div>
 
@@ -122,9 +122,7 @@
                   <button type="button" class="ghost-btn muted" @click="cancelEditing">
                     Cancel
                   </button>
-                  <button type="button" class="ghost-btn primary" @click="saveProfile">
-                    Save
-                  </button>
+                  <button type="button" class="ghost-btn primary" @click="saveProfile">Save</button>
                 </template>
               </div>
             </div>
@@ -176,6 +174,7 @@
 
             <div class="account-footer">
               <button type="button" class="secondary-btn">Reset Password</button>
+              <button @click="handleLogout">Log out</button>
             </div>
           </article>
         </section>
@@ -188,6 +187,16 @@
 import { computed, reactive, ref } from 'vue'
 import BaseSidebar from '@/components/BaseSidebar.vue'
 import type { NavItem } from '@/components/BaseSidebar.vue'
+import { useAuthStore } from '../stores/authStore'
+import { useRouter } from 'vue-router'
+
+const authStore = useAuthStore()
+const router = useRouter()
+
+const handleLogout = async () => {
+  await authStore.logout()
+  router.push('/login')
+}
 
 type VisibilityOption = 'public' | 'community' | 'private'
 

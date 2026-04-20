@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import logo from '../assets/logo.svg'
 import { registerUser } from '../services/authService'
+import { logoutUser } from '../services/authService' // add this
 import { isFirebaseError } from '@/utils/firebaseErrors'
 
 const router = useRouter()
@@ -49,6 +50,10 @@ const handleRegister = async () => {
       password: password.value,
       householdSize: household.value !== '' ? Number(household.value) : null,
     })
+
+    // Firebase auto-logs in after register — sign them out
+    // so they must verify email and log in manually
+    await logoutUser()
 
     // Show success and prompt to check email
     success.value = 'Account created! Please check your email to verify your account.'
