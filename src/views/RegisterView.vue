@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import logoFull from '@/assets/logo/full.png'
 import registerBackground from '@/assets/background/bg1.png'
 import { registerUser } from '../services/authService'
 import { isFirebaseError } from '@/utils/firebaseErrors'
+
 
 const router = useRouter()
 
@@ -36,6 +37,47 @@ withDefaults(
     appName: 'PantryPal',
   },
 )
+
+
+
+const currentSlide = ref(0)
+
+interface Benefit {
+  icon: string
+  title: string
+  desc: string
+}
+
+const benefits: Benefit[] = [
+  {
+    icon: 'bi bi-currency-dollar',
+    title: 'Reduce food spending',
+    desc: 'By tracking inventory and expiry dates, users stop buying food they already have and prevent spoilage.',
+  },
+  {
+    icon: 'bi bi-heart-fill',
+    title: 'Donation Over Disposal',
+    desc: 'Food that would be wasted goes to others who can use it',
+  },
+  {
+    icon: 'fa-solid fa-calendar-check',
+    title: 'Get organized',
+    desc: 'Centralized food inventory with categories and locations',
+  },
+]
+
+const activeBenefit = computed<Benefit>(() => benefits[currentSlide.value] ?? benefits[0]!)
+let slideInterval: ReturnType<typeof setInterval> | undefined
+
+onMounted(() => {
+  slideInterval = setInterval(() => {
+    currentSlide.value = (currentSlide.value + 1) % benefits.length
+  }, 4000)
+})
+
+onUnmounted(() => {
+  if (slideInterval) clearInterval(slideInterval)
+})
 
 const handleRegister = async () => {
   error.value = ''
@@ -173,7 +215,34 @@ const handleRegister = async () => {
       </div>
     </div>
 
-    <div class="right" :style="{ backgroundImage: `url(${registerBackground})` }" aria-label="PantryPal" />
+    <div
+      class="right"
+      :style="{ backgroundImage: `url(${registerBackground})` }"
+      aria-label="PantryPal highlights"
+    >
+      <div class="carousel-container">
+        <div class="carousel-slide" :key="activeBenefit.title">
+          <div class="carousel-icon">
+            <i :class="activeBenefit.icon"></i>
+          </div>
+          <h4>{{ activeBenefit.title }}</h4>
+          <p>{{ activeBenefit.desc }}</p>
+        </div>
+
+        <div class="carousel-dots" aria-label="Carousel slides">
+          <button
+            v-for="(_, index) in benefits"
+            :key="index"
+            type="button"
+            class="carousel-dot"
+            :class="{ active: index === currentSlide }"
+            :aria-label="`Show slide ${index + 1}`"
+            :aria-pressed="index === currentSlide"
+            @click="currentSlide = index"
+          ></button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -204,13 +273,16 @@ const handleRegister = async () => {
 
 .right {
   flex: 1;
-  background-color: #e2e8f0;
+  align-items: center;
+  background-color: #ffffff;
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
+  display: flex;
+  justify-content: center;
   min-height: 100vh;
+  padding: 40px;
 }
-
 .logo-area {
   display: flex;
   align-items: center;
@@ -314,6 +386,92 @@ button:disabled {
   color: #22c55e;
   cursor: pointer;
   font-weight: 600;
+}
+
+
+
+
+.carousel-container {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(100%, 320px);
+}
+
+.carousel-slide {
+  animation: slide-fade 0.35s ease;
+  background: rgba(255, 255, 255, 0.7);
+  min-height: 210px;
+  padding: 28px;
+  text-align: center;
+  width: 100%;
+  border-radius: 25px;
+}
+
+.carousel-icon {
+  color: #242424;
+  display: inline-block;
+  font-size: 5.2rem;
+  line-height: 1;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+
+
+.carousel-slide h4 {
+  color: #242424;
+  font-size: 1.3rem;
+  font-weight: 500;
+  line-height: 1.3;
+
+}
+
+.carousel-slide p {
+  color: #2b2b2b;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.carousel-dots {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.carousel-dot {
+  background: #ffffff;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  height: 18px;
+  padding: 0;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+  width: 18px;
+}
+
+.carousel-dot:not(.active) {
+  opacity: 0.35;
+}
+
+.carousel-dot.active {
+  transform: scale(1.08);
+}
+
+@keyframes slide-fade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 </style>
