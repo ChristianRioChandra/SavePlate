@@ -170,8 +170,8 @@
             </button>
             <button
               class="storage-btn"
-              :class="{ active: selectedStorage === 'counter' }"
-              @click="selectedStorage = 'counter'"
+              :class="{ active: selectedStorage === 'countertop' }"
+              @click="selectedStorage = 'countertop'"
             >
               <i class="bi bi-cup-hot"></i> Countertop
             </button>
@@ -692,21 +692,21 @@
           <!-- COUNTERTOP CATEGORY -->
           <div
             class="storage-category"
-            :class="{ expanded: expandedCategories.counter }"
+            :class="{ expanded: expandedCategories.countertop }"
             id="counterCategory"
           >
-            <div class="category-header" @click="toggleCategory('counter')">
+            <div class="category-header" @click="toggleCategory('countertop')">
               <div class="cat-title">
                 <i class="bi bi-cup-hot"></i>
                 <h2>Countertop</h2>
-                <div class="cat-badge">{{ getCategoryCount('counter') }} items</div>
+                <div class="cat-badge">{{ getCategoryCount('countertop') }} items</div>
               </div>
               <div class="expand-cat-icon"><i class="bi bi-chevron-down"></i></div>
             </div>
             <div class="category-items">
-              <div class="food-grid" data-category="counter" id="counterGrid">
+              <div class="food-grid" data-category="countertop" id="counterGrid">
                 <div
-                  v-for="item in getFilteredAndSortedItems('counter')"
+                  v-for="item in getFilteredAndSortedItems('countertop')"
                   :key="item.id"
                   class="food-item-card"
                   :class="{
@@ -1063,7 +1063,7 @@ const nextId = ref(100)
 
 const currentFilter = ref('all')
 const currentSort = ref('name')
-const filterModes = ['all', 'near-expiry', 'fridge', 'pantry', 'freezer', 'counter']
+const filterModes = ['all', 'near-expiry', 'fridge', 'pantry', 'freezer', 'countertop']
 const sortModes = ['name', 'expiry', 'category']
 type InventoryLayout = 'cards' | 'compact'
 const inventoryLayout = ref<InventoryLayout>('cards')
@@ -1071,7 +1071,7 @@ const compactStorageColumns = [
   { key: 'pantry', label: 'Pantry', icon: 'bi bi-bookshelf' },
   { key: 'fridge', label: 'Fridge', icon: 'bi bi-thermometer-low' },
   { key: 'freezer', label: 'Freezer', icon: 'bi bi-snow' },
-  { key: 'counter', label: 'Countertop', icon: 'bi bi-cup-hot' },
+  { key: 'countertop', label: 'Countertop', icon: 'bi bi-cup-hot' },
 ] as const
 
 const searchQuery = ref('')
@@ -1082,7 +1082,7 @@ const expandedCategories = ref({
   fridge: true,
   pantry: false,
   freezer: false,
-  counter: false,
+  countertop: false,
   expiry: false,
 })
 
@@ -1196,7 +1196,7 @@ function getFilteredAndSortedItems(category: string): InventoryItem[] {
 
   if (currentFilter.value === 'near-expiry') {
     items = items.filter((i) => i.expiryDays <= 3)
-  } else if (['fridge', 'pantry', 'freezer', 'counter'].includes(currentFilter.value)) {
+  } else if (['fridge', 'pantry', 'freezer', 'countertop'].includes(currentFilter.value)) {
     items = items.filter((i) => i.category === currentFilter.value)
   }
 
@@ -1230,7 +1230,7 @@ function getCategoryCount(category: string): number {
   if (category === 'all') {
     let items = [...inventory.value]
     if (currentFilter.value === 'near-expiry') items = items.filter((i) => i.expiryDays <= 3)
-    else if (['fridge', 'pantry', 'freezer', 'counter'].includes(currentFilter.value))
+    else if (['fridge', 'pantry', 'freezer', 'countertop'].includes(currentFilter.value))
       items = items.filter((i) => i.category === currentFilter.value)
     if (searchQuery.value) {
       const q = searchQuery.value.toLowerCase()
@@ -1353,7 +1353,7 @@ function getFilterLabel(filter: string): string {
     fridge: 'Fridge',
     pantry: 'Pantry',
     freezer: 'Freezer',
-    counter: 'Countertop',
+    countertop: 'Countertop',
     all: 'All',
   }
   return labels[filter] || 'All'
@@ -2810,7 +2810,7 @@ footer {
   border: 1px solid transparent;
   background: #f8fafc;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   font-weight: 600;
   min-height: 52px;
   transition: all 0.2s ease;

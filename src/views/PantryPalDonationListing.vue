@@ -29,10 +29,10 @@
           </div>
         </div>
 
-        <!-- Recent Listings Section -->
+        <!-- Your Donations Section -->
         <section class="section">
           <div class="section-header">
-            <h3>Recent Listings</h3>
+            <h3>Your Donations</h3>
           </div>
           <div class="cards-grid">
             <div v-for="item in recentListings" :key="item.id" class="donation-card">
