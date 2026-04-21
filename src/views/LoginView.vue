@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import logo from '../assets/logo.svg'
+import logoFull from '@/assets/logo/full.png'
+import loginBackground from '@/assets/background/bg1.png'
 import { loginUser } from '../services/authService'
 import { isFirebaseError } from '@/utils/firebaseErrors'
 
@@ -12,6 +13,22 @@ const password = ref('')
 const showPassword = ref(false)
 const error = ref('')
 const loading = ref(false)
+
+export interface NavItem {
+  label: string
+  route: string
+  icon?: string // optional; if missing, uses nav-dot
+}
+
+withDefaults(
+  defineProps<{
+    navItems: NavItem[]
+    appName?: string
+  }>(),
+  {
+    appName: 'PantryPal',
+  },
+)
 
 const handleLogin = async () => {
   error.value = ''
@@ -69,9 +86,9 @@ const handleLogin = async () => {
   <div class="auth-container">
     <div class="left">
       <div class="form-card">
-        <img :src="logo" alt="logo" class="logo" />
+        <img class="logo-image" :src="logoFull" :alt="appName" />
 
-        <h2>Login</h2>
+
 
         <!-- EMAIL (changed from username to email for Firebase) -->
         <input v-model="email" type="email" placeholder="Email" :disabled="loading" />
@@ -108,12 +125,7 @@ const handleLogin = async () => {
       </div>
     </div>
 
-    <div class="right">
-      <div>
-        <h3>Welcome Back</h3>
-        <p>Login to manage your pantry efficiently.</p>
-      </div>
-    </div>
+    <div class="right" :style="{ backgroundImage: `url(${loginBackground})` }" aria-label="PantryPal" />
   </div>
 </template>
 
@@ -144,17 +156,25 @@ const handleLogin = async () => {
 
 .right {
   flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #e2e8f0;
-  text-align: center;
-  padding: 40px;
+  background-color: #e2e8f0;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  min-height: 100vh;
 }
 
-.logo {
-  width: 60px;
-  margin-bottom: 10px;
+.logo-area {
+  display: flex;
+  align-items: center;
+  margin-bottom: 44px;
+  padding-left: 6px;
+}
+
+.logo-image {
+  display: block;
+  width: min(100%, 175px);
+  height: auto;
+  padding-bottom: 25px;
 }
 
 h2 {
@@ -237,11 +257,4 @@ button:disabled {
   font-weight: 600;
 }
 
-.right h3 {
-  font-size: 24px;
-}
-
-.right p {
-  color: #555;
-}
 </style>
