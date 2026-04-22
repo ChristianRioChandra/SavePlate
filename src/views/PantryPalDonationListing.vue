@@ -9,11 +9,6 @@
           search-placeholder="Search by item, category, location..."
           v-model:search-value="searchQuery"
         >
-          <template #actions>
-            <i class="bi bi-bell"></i>
-            <i class="bi bi-gear"></i>
-            <i class="bi bi-box-arrow-right"></i>
-          </template>
         </BaseTopbar>
 
         <!-- Hero Banner -->

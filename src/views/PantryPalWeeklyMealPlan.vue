@@ -9,11 +9,6 @@
           search-placeholder="Search meals or ingredients..."
           v-model:search-value="mealSearch"
         >
-          <template #actions>
-            <i class="bi bi-bell"></i>
-            <i class="bi bi-gear"></i>
-            <i class="bi bi-box-arrow-right"></i>
-          </template>
         </BaseTopbar2>
 
         <!-- Content Grid -->
