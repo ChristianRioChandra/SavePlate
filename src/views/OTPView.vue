@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import logoFull from '@/assets/logo/full.png'
+import { computed } from 'vue'
 
 const router = useRouter()
 
@@ -82,6 +83,11 @@ const verifyOTP = () => {
   }
 }
 
+const isOtpValid = computed(() => {
+  return otp.value.every(d => /^[0-9]$/.test(d))
+})
+
+
 // lifecycle
 onMounted(() => {
   startTimer()
@@ -131,8 +137,12 @@ onUnmounted(() => {
         Resend OTP
       </p>
 
-      <button @click="verifyOTP">Verify</button>
-
+      <button
+        @click="verifyOTP"
+        :disabled="!isOtpValid"
+      >
+        Verify
+      </button>
     </div>
   </div>
 </template>
@@ -155,8 +165,8 @@ onUnmounted(() => {
   box-shadow: 0 10px 25px rgba(0,0,0,0.05);
 }
 
-.logo {
-  width: 50px;
+.logo-image{
+  width: 190px;
   margin-bottom: 15px;
 }
 
@@ -214,6 +224,12 @@ button {
   color: white;
   border: none;
   border-radius: 8px;
+}
+
+button:disabled {
+  background: #E5E7EB;
+  cursor: not-allowed;
+  opacity: 0.9;
 }
 
 .error {
