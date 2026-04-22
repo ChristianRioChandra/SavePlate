@@ -118,8 +118,12 @@
         :expiring-soon="expiringSoonCount"
       >
         <template #quick-actions>
-          <button class="right-btn"><i class="bi bi-plus-circle"></i> Post Donation</button>
-          <button class="right-btn"><i class="bi bi-geo-alt"></i> Set Pickup Location</button>
+          <button class="right-btn" @click="postDonationNavigate">
+            <i class="bi bi-plus-circle"></i> Post Donation
+          </button>
+          <button class="right-btn" @click="setPickupLocationNavigate">
+            <i class="bi bi-geo-alt"></i> Set Pickup Location
+          </button>
         </template>
         <template #stats>
           <div class="stat-item">
@@ -333,6 +337,9 @@ const cycleFilter = () => {
 const toggleBrowseSection = () => {
   showBrowseDonations.value = !showBrowseDonations.value
 }
+
+const postDonationNavigate = () => alert('Posting donation (prototype)')
+const setPickupLocationNavigate = () => alert('Setting pickup location (prototype)')
 </script>
 
 <style scoped>
