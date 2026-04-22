@@ -43,15 +43,17 @@
               <div class="card-desc">{{ item.description }}</div>
               <div class="card-actions">
                 <button class="action-btn">Details</button>
-                <button class="action-btn primary">Claim</button>
+                <button class="action-btn danger">Unpublish</button>
               </div>
             </div>
           </div>
-          <button class="browse-all-btn">Browse All Donations →</button>
+          <button class="browse-all-btn" @click="toggleBrowseSection">
+            {{ showBrowseDonations ? 'Hide Browse Donations' : 'Browse All Donations' }} →
+          </button>
         </section>
 
         <!-- Browse All Section -->
-        <section class="section">
+        <section v-if="showBrowseDonations" class="section">
           <div class="section-header">
             <h3>Browse Donations</h3>
             <div class="filter-sort">
@@ -140,6 +142,7 @@ const navItems: NavItem[] = [
 const searchQuery = ref('')
 const currentSort = ref<'name' | 'expiry'>('name')
 const currentFilter = ref<'all' | 'near-expiry'>('all')
+const showBrowseDonations = ref(false)
 
 const recentListings = ref<DonationItem[]>([
   {
@@ -242,6 +245,10 @@ const cycleSort = () => {
 
 const cycleFilter = () => {
   currentFilter.value = currentFilter.value === 'all' ? 'near-expiry' : 'all'
+}
+
+const toggleBrowseSection = () => {
+  showBrowseDonations.value = !showBrowseDonations.value
 }
 </script>
 
@@ -472,6 +479,16 @@ const cycleFilter = () => {
 
 .action-btn.primary:hover {
   background: #1f5e3a;
+}
+
+.action-btn.danger {
+  background: #fee2e2;
+  color: #991b1b;
+  border: none;
+}
+
+.action-btn.danger:hover {
+  background: #fecaca;
 }
 
 .action-btn:hover {
