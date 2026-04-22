@@ -8,8 +8,7 @@
           title="Meal Plan"
           search-placeholder="Search meals or ingredients..."
           v-model:search-value="mealSearch"
-        >
-        </BaseTopbar2>
+        />
 
         <!-- Content Grid -->
         <div class="content-grid">
@@ -55,16 +54,18 @@
               <div class="meal-slot-body">
                 <span v-if="slot.meal" class="meal-name">{{ slot.meal }}</span>
                 <span v-else class="meal-empty">Not planned yet</span>
-                <button class="meal-edit-btn">
+                <button class="meal-edit-btn" @click="openMealEdit(slot.type)">
                   {{ slot.meal ? 'Edit' : '+ Add' }}
                 </button>
               </div>
             </div>
             <div class="meal-actions">
-              <button class="card-action-btn">Create Meal</button>
-              <button class="card-action-btn primary">Browse Recommendations</button>
+              <button class="card-action-btn" @click="scrollToRecommendations">Create Meal</button>
+              <button class="card-action-btn primary" @click="scrollToRecommendations">
+                Browse Recommendations
+              </button>
             </div>
-            <button class="save-btn">Save Plan</button>
+            <button class="save-btn" @click="saveMealPlan">Save Plan</button>
           </div>
 
           <!-- Inventory Card -->
@@ -79,7 +80,7 @@
                 placeholder="Search items..."
                 class="form-control form-control-sm"
               />
-              <button class="filter-btn-sm">Filter</button>
+              <button class="filter-btn-sm" @click="inventorySearch = ''">Clear</button>
             </div>
             <div class="inventory-list">
               <div v-for="item in filteredInventory" :key="item.id" class="inventory-item">
@@ -89,13 +90,13 @@
                   <div class="inv-sub">{{ item.location }} · Exp: {{ item.expiry }}</div>
                 </div>
                 <span v-if="item.warning" class="inv-tag warn">{{ item.tag }}</span>
-                <button class="inv-add-btn">Add</button>
+                <button class="inv-add-btn" @click="addIngredientFromInventory(item)">Add</button>
               </div>
             </div>
           </div>
 
           <!-- Create Meal & Recommendations -->
-          <div class="create-card">
+          <div class="create-card" ref="recommendationsSection">
             <div class="dashboard-card">
               <div class="card-header">
                 <i class="bi bi-plus-circle"></i>
@@ -111,9 +112,17 @@
                   {{ ing.icon }} {{ ing.name }}
                   <span class="remove-ingr" @click="removeIngredient(idx)">✕</span>
                 </div>
-                <div class="add-ingr" @click="showIngredientSelector = true">+ Add ingredients</div>
+                <div class="add-ingr" @click="openIngredientSelector">+ Add ingredients</div>
               </div>
-              <button class="card-action-btn primary" @click="addMeal">Add Meal</button>
+              <div class="form-field">
+                <label>Assign to meal slot</label>
+                <select v-model="selectedMealSlotForNewMeal" class="form-control">
+                  <option v-for="slot in mealSlots" :key="slot.type" :value="slot.type">
+                    {{ slot.label }} {{ slot.meal ? `(currently: ${slot.meal})` : '' }}
+                  </option>
+                </select>
+              </div>
+              <button class="card-action-btn primary" @click="addMealToPlan">Add to Plan</button>
             </div>
 
             <div class="dashboard-card">
@@ -127,7 +136,7 @@
                   <div class="reco-name">{{ rec.name }}</div>
                   <div class="reco-sub">Uses: {{ rec.uses }}</div>
                 </div>
-                <button class="reco-add">+ Plan</button>
+                <button class="reco-add" @click="planRecommendation(rec)">+ Plan</button>
               </div>
             </div>
           </div>
@@ -140,22 +149,77 @@
         :expiring-soon="inventoryItems.filter((i) => i.warning).length"
       >
         <template #quick-actions>
-          <button class="right-btn"><i class="bi bi-calendar-plus"></i> Plan Week</button>
-          <button class="right-btn"><i class="bi bi-cart"></i> Shopping List</button>
-          <button class="right-btn"><i class="bi bi-star"></i> Favorite Meals</button>
+          <button class="right-btn" @click="planWeekNavigate">
+            <i class="bi bi-calendar-plus"></i> Plan Week
+          </button>
+          <button class="right-btn" @click="shoppingListNavigate">
+            <i class="bi bi-cart"></i> Shopping List
+          </button>
+          <button class="right-btn" @click="favoriteMealsNavigate">
+            <i class="bi bi-star"></i> Favorite Meals
+          </button>
         </template>
       </BaseRightSidebar>
+    </div>
+
+    <!-- Ingredient Selector Modal -->
+    <div v-if="showIngredientSelector" class="modal-overlay" @click.self="closeIngredientSelector">
+      <div class="modal-box">
+        <h3>Select Ingredients</h3>
+        <div class="inv-search-row">
+          <input
+            v-model="ingredientSearch"
+            placeholder="Search inventory..."
+            class="form-control"
+          />
+        </div>
+        <div class="inventory-list" style="max-height: 300px">
+          <div
+            v-for="item in filteredInventoryForModal"
+            :key="item.id"
+            class="inventory-item"
+            @click="toggleIngredientSelection(item)"
+          >
+            <div class="inv-icon">{{ item.icon }}</div>
+            <div class="inv-info">
+              <div class="inv-name">{{ item.name }}</div>
+              <div class="inv-sub">{{ item.location }}</div>
+            </div>
+            <input type="checkbox" :checked="isIngredientSelected(item)" readonly />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="modal-cancel" @click="closeIngredientSelector">Cancel</button>
+          <button class="modal-add" @click="confirmIngredientSelection">Add Selected</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Meal Edit Modal -->
+    <div v-if="editingMealSlot" class="modal-overlay" @click.self="closeMealEdit">
+      <div class="modal-box">
+        <h3>{{ editingMealSlotLabel }} Meal</h3>
+        <div class="form-field">
+          <label>Meal Name</label>
+          <input v-model="editingMealName" class="form-control" />
+        </div>
+        <div class="modal-actions">
+          <button class="modal-cancel" @click="closeMealEdit">Cancel</button>
+          <button class="modal-add" @click="saveMealEdit">Save</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import BaseSidebar from '@/components/BaseSidebar.vue'
 import BaseTopbar2 from '@/components/BaseTopbar2.vue'
 import BaseRightSidebar from '@/components/BaseRightSidebar.vue'
 import type { NavItem } from '@/components/BaseSidebar.vue'
 
+// Types
 interface InventoryItem {
   id: number
   icon: string
@@ -173,18 +237,30 @@ interface Recommendation {
   uses: string
 }
 
-// Calendar state
-const currentDate = ref(new Date(2026, 3, 14)) // April 14, 2026 (month index 3)
-const selectedDate = ref(new Date(2026, 3, 14))
+interface MealSlot {
+  type: string
+  label: string
+  meal: string
+}
 
+// Navigation
+const navItems: NavItem[] = [
+  { label: 'Dashboard', route: '/dashboard', icon: 'bi bi-graph-up' },
+  { label: 'Inventory', route: '/inventory', icon: 'bi bi-box-seam' },
+  { label: 'Meal Plan', route: '/meal-plan', icon: 'bi bi-calendar' },
+  { label: 'Donation', route: '/donations', icon: 'bi bi-heart' },
+  { label: 'Analytics', route: '/analytics', icon: 'bi bi-pie-chart' },
+  { label: 'Settings', route: '/settings', icon: 'bi bi-gear' },
+]
+
+// Calendar
+const currentDate = ref(new Date(2026, 3, 14))
+const selectedDate = ref(new Date(2026, 3, 14))
 const dayLabels = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 
-const currentMonthYear = computed(() => {
-  return currentDate.value.toLocaleDateString('en-US', {
-    month: 'long',
-    year: 'numeric',
-  })
-})
+const currentMonthYear = computed(() =>
+  currentDate.value.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+)
 
 interface CalendarDay {
   date: Date
@@ -199,14 +275,13 @@ const calendarDays = computed<CalendarDay[]>(() => {
   const year = currentDate.value.getFullYear()
   const month = currentDate.value.getMonth()
   const firstDay = new Date(year, month, 1)
-  const startDayOfWeek = firstDay.getDay() // 0 = Sunday
+  const startDayOfWeek = firstDay.getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
 
   const days: CalendarDay[] = []
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  // Previous month days
   const prevMonthDate = new Date(year, month, 0)
   const daysInPrevMonth = prevMonthDate.getDate()
   for (let i = startDayOfWeek - 1; i >= 0; i--) {
@@ -221,7 +296,6 @@ const calendarDays = computed<CalendarDay[]>(() => {
     })
   }
 
-  // Current month days
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(year, month, d)
     days.push({
@@ -234,7 +308,6 @@ const calendarDays = computed<CalendarDay[]>(() => {
     })
   }
 
-  // Next month days to fill 42 cells (6 rows)
   const remainingCells = 42 - days.length
   for (let d = 1; d <= remainingCells; d++) {
     const date = new Date(year, month + 1, d)
@@ -251,35 +324,56 @@ const calendarDays = computed<CalendarDay[]>(() => {
   return days
 })
 
-const formattedSelectedDate = computed(() => {
-  return selectedDate.value.toLocaleDateString('en-US', {
+const formattedSelectedDate = computed(() =>
+  selectedDate.value.toLocaleDateString('en-US', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  })
-})
+  }),
+)
 
 const prevMonth = () => {
   currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() - 1, 1)
 }
-
 const nextMonth = () => {
   currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() + 1, 1)
 }
-
 const selectDate = (date: Date) => {
   selectedDate.value = new Date(date)
   selectedDate.value.setHours(0, 0, 0, 0)
+  loadMealsForDate()
 }
 
-// Meal slots for selected date
-const mealSlots = ref([
-  { type: 'breakfast', label: 'Breakfast', meal: 'Cereal with UltraMilk' },
-  { type: 'lunch', label: 'Lunch', meal: 'Chicken Wings' },
-  { type: 'dinner', label: 'Dinner', meal: 'Chicken Katsu' },
+// Meal slots
+const mealSlots = ref<MealSlot[]>([
+  { type: 'breakfast', label: 'Breakfast', meal: '' },
+  { type: 'lunch', label: 'Lunch', meal: '' },
+  { type: 'dinner', label: 'Dinner', meal: '' },
   { type: 'snacks', label: 'Snacks', meal: '' },
 ])
+
+// Mock meal plan storage (in real app, would be per date)
+const savedPlans = ref<Map<string, MealSlot[]>>(new Map())
+
+const loadMealsForDate = () => {
+  const dateKey = selectedDate.value.toISOString().split('T')[0]
+  const saved = savedPlans.value.get(dateKey!)
+  if (saved) {
+    mealSlots.value = saved.map((slot) => ({ ...slot }))
+  } else {
+    mealSlots.value = [
+      { type: 'breakfast', label: 'Breakfast', meal: '' },
+      { type: 'lunch', label: 'Lunch', meal: '' },
+      { type: 'dinner', label: 'Dinner', meal: '' },
+      { type: 'snacks', label: 'Snacks', meal: '' },
+    ]
+  }
+}
+
+// Load initial meals for selected date
+loadMealsForDate()
+watch(selectedDate, loadMealsForDate)
 
 // Inventory
 const inventorySearch = ref('')
@@ -293,27 +387,9 @@ const inventoryItems = ref<InventoryItem[]>([
     tag: '2d',
     warning: true,
   },
-  {
-    id: 2,
-    icon: '🍞',
-    name: 'Loaf of Bread · 300g',
-    location: 'Pantry',
-    expiry: '18 Apr 2026',
-  },
-  {
-    id: 3,
-    icon: '🍚',
-    name: 'Leftover Rice',
-    location: 'Fridge',
-    expiry: '18 Apr 2026',
-  },
-  {
-    id: 4,
-    icon: '🥚',
-    name: 'Eggs · 6 pcs',
-    location: 'Fridge',
-    expiry: '25 Apr 2026',
-  },
+  { id: 2, icon: '🍞', name: 'Loaf of Bread · 300g', location: 'Pantry', expiry: '18 Apr 2026' },
+  { id: 3, icon: '🍚', name: 'Leftover Rice', location: 'Fridge', expiry: '18 Apr 2026' },
+  { id: 4, icon: '🥚', name: 'Eggs · 6 pcs', location: 'Fridge', expiry: '25 Apr 2026' },
 ])
 
 const filteredInventory = computed(() => {
@@ -326,55 +402,145 @@ const filteredInventory = computed(() => {
 
 // Create meal form
 const newMealName = ref('')
-const selectedIngredients = ref<{ icon: string; name: string }[]>([
-  { icon: '🥛', name: 'UltraMilk · 500ml Original' },
-  { icon: '🍞', name: 'Loaf of Bread · 300g' },
-])
+const selectedIngredients = ref<{ icon: string; name: string }[]>([])
+const selectedMealSlotForNewMeal = ref('breakfast')
 const showIngredientSelector = ref(false)
+const ingredientSearch = ref('')
+const tempSelectedIngredients = ref<Set<number>>(new Set())
+
+const filteredInventoryForModal = computed(() => {
+  if (!ingredientSearch.value) return inventoryItems.value
+  const q = ingredientSearch.value.toLowerCase()
+  return inventoryItems.value.filter((item) => item.name.toLowerCase().includes(q))
+})
+
+const openIngredientSelector = () => {
+  tempSelectedIngredients.value.clear()
+  selectedIngredients.value.forEach((ing) => {
+    const found = inventoryItems.value.find((item) => item.name === ing.name)
+    if (found) tempSelectedIngredients.value.add(found.id)
+  })
+  showIngredientSelector.value = true
+}
+
+const closeIngredientSelector = () => {
+  showIngredientSelector.value = false
+  ingredientSearch.value = ''
+}
+
+const toggleIngredientSelection = (item: InventoryItem) => {
+  if (tempSelectedIngredients.value.has(item.id)) {
+    tempSelectedIngredients.value.delete(item.id)
+  } else {
+    tempSelectedIngredients.value.add(item.id)
+  }
+}
+
+const isIngredientSelected = (item: InventoryItem) => tempSelectedIngredients.value.has(item.id)
+
+const confirmIngredientSelection = () => {
+  selectedIngredients.value = Array.from(tempSelectedIngredients.value).map((id) => {
+    const item = inventoryItems.value.find((i) => i.id === id)!
+    return { icon: item.icon, name: item.name }
+  })
+  closeIngredientSelector()
+}
 
 const removeIngredient = (index: number) => {
   selectedIngredients.value.splice(index, 1)
 }
 
-const addMeal = () => {
-  // In a real app, this would save to Firestore
-  alert(`Meal "${newMealName.value}" added!`)
-  newMealName.value = ''
-  selectedIngredients.value = []
+const addIngredientFromInventory = (item: InventoryItem) => {
+  if (!selectedIngredients.value.some((ing) => ing.name === item.name)) {
+    selectedIngredients.value.push({ icon: item.icon, name: item.name })
+  }
+}
+
+const addMealToPlan = () => {
+  if (!newMealName.value.trim()) {
+    alert('Please enter a meal name')
+    return
+  }
+  const slotType = selectedMealSlotForNewMeal.value
+  const slot = mealSlots.value.find((s) => s.type === slotType)
+  if (slot) {
+    slot.meal = newMealName.value
+    newMealName.value = ''
+    // Optional: also store ingredients? Not needed for prototype
+  }
 }
 
 // Recommendations
 const recommendations = ref<Recommendation[]>([
-  {
-    id: 1,
-    icon: '🍛',
-    name: 'Nasi Goreng',
-    uses: 'Rice, Eggs, Chicken',
-  },
-  {
-    id: 2,
-    icon: '🍜',
-    name: 'Mie Goreng',
-    uses: 'Noodles, Eggs, Veggies',
-  },
-  {
-    id: 3,
-    icon: '🥞',
-    name: 'Milk Pancakes',
-    uses: 'UltraMilk, Eggs, Flour',
-  },
+  { id: 1, icon: '🍛', name: 'Nasi Goreng', uses: 'Rice, Eggs, Chicken' },
+  { id: 2, icon: '🍜', name: 'Mie Goreng', uses: 'Noodles, Eggs, Veggies' },
+  { id: 3, icon: '🥞', name: 'Milk Pancakes', uses: 'UltraMilk, Eggs, Flour' },
 ])
 
-// Make sure to define navItems with icons or without (use nav-dot)
-const navItems: NavItem[] = [
-  { label: 'Dashboard', route: '/dashboard', icon: 'bi bi-graph-up' },
-  { label: 'Inventory', route: '/inventory', icon: 'bi bi-box-seam' },
-  { label: 'Meal Plan', route: '/meal-plan', icon: 'bi bi-calendar' },
-  { label: 'Donation', route: '/donations', icon: 'bi bi-heart' },
-  { label: 'Analytics', route: '/analytics', icon: 'bi bi-pie-chart' },
-  { label: 'Settings', route: '/settings', icon: 'bi bi-gear' },
-]
+const planRecommendation = (rec: Recommendation) => {
+  // Find first empty slot
+  const emptySlot = mealSlots.value.find((s) => !s.meal)
+  if (emptySlot) {
+    emptySlot.meal = rec.name
+    alert(`"${rec.name}" added to ${emptySlot.label}`)
+  } else {
+    alert('All slots are filled. Edit one to replace it.')
+  }
+}
 
+// Meal editing
+const editingMealSlot = ref<string | null>(null)
+const editingMealName = ref('')
+
+const editingMealSlotLabel = computed(() => {
+  const slot = mealSlots.value.find((s) => s.type === editingMealSlot.value)
+  return slot?.label || ''
+})
+
+const openMealEdit = (slotType: string) => {
+  const slot = mealSlots.value.find((s) => s.type === slotType)
+  if (slot) {
+    editingMealSlot.value = slotType
+    editingMealName.value = slot.meal || ''
+  }
+}
+
+const closeMealEdit = () => {
+  editingMealSlot.value = null
+  editingMealName.value = ''
+}
+
+const saveMealEdit = () => {
+  if (!editingMealSlot.value) return
+  const slot = mealSlots.value.find((s) => s.type === editingMealSlot.value)
+  if (slot) {
+    slot.meal = editingMealName.value.trim() || ''
+  }
+  closeMealEdit()
+}
+
+// Save plan
+const saveMealPlan = () => {
+  const dateKey = selectedDate.value.toISOString().split('T')[0]
+  savedPlans.value.set(
+    dateKey!,
+    mealSlots.value.map((slot) => ({ ...slot })),
+  )
+  alert(`Meal plan for ${formattedSelectedDate.value} saved!`)
+}
+
+// Right sidebar actions
+const planWeekNavigate = () => alert('Week planning mode (prototype)')
+const shoppingListNavigate = () => alert('Shopping list generated (prototype)')
+const favoriteMealsNavigate = () => alert('Favorite meals view (prototype)')
+
+// Scroll to recommendations
+const recommendationsSection = ref<HTMLElement | null>(null)
+const scrollToRecommendations = () => {
+  recommendationsSection.value?.scrollIntoView({ behavior: 'smooth' })
+}
+
+// Misc
 const mealSearch = ref('')
 </script>
 
@@ -848,5 +1014,54 @@ hr {
 .right-btn i {
   width: 20px;
   color: #2c7a4d;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-box {
+  background: white;
+  border-radius: 28px;
+  padding: 24px;
+  width: 500px;
+  max-width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+.modal-box h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+.modal-cancel,
+.modal-add {
+  padding: 10px 20px;
+  border-radius: 40px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+.modal-cancel {
+  background: #f3f6fb;
+  color: #2c3e4e;
+}
+.modal-add {
+  background: #2c7a4d;
+  color: white;
 }
 </style>
