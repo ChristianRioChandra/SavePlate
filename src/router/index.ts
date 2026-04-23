@@ -23,6 +23,13 @@ const router = createRouter({
       name: 'login',
       component: LoginView,
     },
+
+    {
+      path: '/otp',
+      name: 'otp',
+      component: () => import('../views/OTPView.vue')
+    },
+
     {
       path: '/',
       name: 'landing',
@@ -62,14 +69,21 @@ const router = createRouter({
   ],
 })
 
+// change from:
 router.beforeEach((to, from, next) => {
   const isLogin = localStorage.getItem('isLogin')
-
-  if (!isLogin && to.name !== 'login' && to.name !== 'register' && to.path !== '/') {
+  if (!isLogin && to.name !== 'login' && to.name !== 'register' && to.name !== 'otp' && to.path !== '/') {
     next('/login')
   } else {
     next()
   }
 })
 
+// to:
+router.beforeEach((to) => {
+  const isLogin = localStorage.getItem('isLogin')
+  if (!isLogin && to.name !== 'login' && to.name !== 'register' && to.name !== 'otp' && to.path !== '/') {
+    return '/login'
+  }
+})
 export default router

@@ -12,39 +12,38 @@ const error = ref('')
 const timer = ref(180)
 let interval: ReturnType<typeof setInterval>
 
-const isOtpValid = computed(() => {
-  return otp.value.every(digit => digit !== '')
-})
+// ✅ validasi tombol
+const isOtpValid = computed(() => otp.value.every(d => d !== ''))
 
+// ⏱ timer
 const startTimer = () => {
   interval = setInterval(() => {
-    if (timer.value > 0) {
-      timer.value--
-    }
+    if (timer.value > 0) timer.value--
   }, 1000)
 }
 
-// format mm:ss
+// ⏱ format waktu
 const formatTime = () => {
-  const minutes = Math.floor(timer.value / 60)
-  const seconds = timer.value % 60
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  const m = Math.floor(timer.value / 60)
+  const s = timer.value % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
 }
 
+// 🔁 resend (UI only)
 const resendOTP = () => {
   if (timer.value > 0) return
 
-  alert('New OTP Has Been Sent!')
+  alert('OTP resent (check console for now)')
 
   otp.value = ['', '', '', '', '', '']
   timer.value = 180
 }
 
-// INPUT
-const handleInput = (index: number, event: Event) => {
-  error.value = '' // reset error
+// ⌨ input
+const handleInput = (index: number, e: Event) => {
+  error.value = ''
 
-  const target = event.target as HTMLInputElement
+  const target = e.target as HTMLInputElement
   const value = target.value
 
   if (!/^[0-9]$/.test(value)) {
@@ -54,19 +53,17 @@ const handleInput = (index: number, event: Event) => {
 
   otp.value[index] = value
 
-  if (index < 5) {
-    inputs.value[index + 1]?.focus()
-  }
+  if (index < 5) inputs.value[index + 1]?.focus()
 }
 
-// BACKSPACE
-const handleKeydown = (index: number, event: KeyboardEvent) => {
-  if (event.key === 'Backspace' && !otp.value[index] && index > 0) {
+// ⌫ backspace
+const handleKeydown = (index: number, e: KeyboardEvent) => {
+  if (e.key === 'Backspace' && !otp.value[index] && index > 0) {
     inputs.value[index - 1]?.focus()
   }
 }
 
-// VERIFY
+// ✅ VERIFY
 const verifyOTP = () => {
   error.value = ''
 
@@ -98,7 +95,14 @@ const verifyOTP = () => {
   router.push({ name: 'dashboard' })
 }
 
+// lifecycle
 onMounted(() => {
+  const expiry = localStorage.getItem('otp_expiry')
+
+  if (!expiry || Date.now() > Number(expiry)) {
+    error.value = 'OTP expired! Please login again.'
+  }
+
   startTimer()
 })
 

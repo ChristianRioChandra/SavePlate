@@ -39,6 +39,7 @@ interface Benefit {
   desc: string
 }
 
+
 const benefits: Benefit[] = [
   {
     icon: 'bi bi-currency-dollar',
@@ -73,7 +74,6 @@ onUnmounted(() => {
 const handleLogin = async () => {
   error.value = ''
 
-  // validation
   if (!email.value || !password.value) {
     error.value = 'Email and password are required!'
     return
@@ -84,26 +84,35 @@ const handleLogin = async () => {
   try {
     const user = await loginUser(email.value, password.value)
 
-    // cek email verification
+    const userEmail = user.email || email.value
+
+    console.log('📧 FINAL EMAIL:', userEmail)
+
     if (!user.emailVerified) {
       error.value = 'Please verify your email before logging in.'
-      loading.value = false
       return
     }
 
-    // generate OTP random (6 digit)
-    const generatedOTP = Math.floor(100000 + Math.random() * 900000).toString()
+    console.log('SEND TO:', userEmail)
 
-    // simpan ke localStorage
-    localStorage.setItem('otp_email', email.value)
-    localStorage.setItem('otp_code', generatedOTP)
-    localStorage.setItem('otp_expiry', (Date.now() + 180000).toString()) // 3 menit
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString()
+    const expiryTime = Date.now() + 180000 // 3 menit
 
-    // kirim email OTP
-    await sendOTPEmail(email.value, generatedOTP)
+    // save
+    localStorage.setItem('otp_code', otp)
+    localStorage.setItem('otp_expiry', expiryTime.toString())
+    localStorage.setItem('otp_email', userEmail)
 
-    // redirect ke OTP page
-    router.push({ name: 'otp' })
+    console.log('OTP DEBUG:', otp)
+
+
+    sendOTPEmail(userEmail, otp)
+      .then(() => console.log('Email sent'))
+      .catch((err) => console.error('Email error:', err))
+
+    // route to OTP page
+    router.push('/otp')
 
   } catch (err: unknown) {
     if (isFirebaseError(err)) {
@@ -112,27 +121,21 @@ const handleLogin = async () => {
           error.value = 'No account found with this email.'
           break
         case 'auth/wrong-password':
-          error.value = 'Incorrect password. Please try again.'
-          break
-        case 'auth/invalid-email':
-          error.value = 'Please enter a valid email address.'
-          break
-        case 'auth/invalid-credential':
-          error.value = 'Invalid email or password.'
-          break
-        case 'auth/too-many-requests':
-          error.value = 'Too many failed attempts. Please try again later.'
+          error.value = 'Incorrect password.'
           break
         default:
-          error.value = 'Login failed. Please try again.'
+          error.value = 'Login failed.'
       }
     } else {
-      error.value = 'An unexpected error occurred. Please try again.'
+      console.error(err)
+      error.value = 'An unexpected error occurred.'
     }
   } finally {
     loading.value = false
   }
 }
+
+
 </script>
 
 <template>
