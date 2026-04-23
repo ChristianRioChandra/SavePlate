@@ -15,9 +15,26 @@
             </p>
           </div>
 
-          <div class="hero-summary">
+          <div
+            class="hero-summary"
+            :class="{
+              'strong': securityStatus === 'Strong',
+              'balanced': securityStatus === 'Balanced',
+              'basic': securityStatus === 'Basic'
+            }"
+          >
             <span class="summary-label">Security status</span>
-            <strong>{{ securityStatus }}</strong>
+            <strong>
+              <i
+                class="bi"
+                :class="{
+                  'bi-shield-fill-check': securityStatus === 'Strong',
+                  'bi-shield-fill-exclamation': securityStatus === 'Balanced',
+                  'bi-shield-fill-x': securityStatus === 'Basic'
+                }"
+              ></i>
+              {{ securityStatus }}
+            </strong>
             <span class="summary-caption">{{ visibilityLabel }} listings</span>
           </div>
         </section>
@@ -348,17 +365,34 @@ const saveProfile = () => {
   min-width: 220px;
   padding: 22px 24px;
   border-radius: 28px;
-  background: #1f5e3a;
+  background: #64748b;
   color: white;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  box-shadow: 0 16px 32px rgba(44, 122, 77, 0.18);
+}
+
+.hero-summary.strong {
+  background: #1f5e3a;
+  box-shadow: 0 16px 32px rgba(44, 122, 77, 0.30);
+}
+
+.hero-summary.balanced {
+  background: #f59e0b;
+  box-shadow: 0 16px 32px rgba(245, 158, 11, 0.30);
+}
+
+.hero-summary.basic {
+  background: #ef4444;
+  box-shadow: 0 16px 32px rgba(239, 68, 68, 0.30);
 }
 
 .hero-summary strong {
   font-size: 1.5rem;
   font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .summary-label,
