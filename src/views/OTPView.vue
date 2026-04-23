@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import logoFull from '@/assets/logo/full.png'
-import { computed } from 'vue'
 
 const router = useRouter()
 
@@ -10,10 +9,12 @@ const otp = ref(['', '', '', '', '', ''])
 const inputs = ref<(HTMLInputElement | null)[]>([])
 const error = ref('')
 
-const correctOTP = '123456'
-
 const timer = ref(180)
 let interval: ReturnType<typeof setInterval>
+
+const isOtpValid = computed(() => {
+  return otp.value.every(digit => digit !== '')
+})
 
 const startTimer = () => {
   interval = setInterval(() => {
@@ -35,15 +36,14 @@ const resendOTP = () => {
 
   alert('New OTP Has Been Sent!')
 
-  // reset OTP input
   otp.value = ['', '', '', '', '', '']
-
-  // reset timer
   timer.value = 180
 }
 
-// INPUT HANDLER
+// INPUT
 const handleInput = (index: number, event: Event) => {
+  error.value = '' // reset error
+
   const target = event.target as HTMLInputElement
   const value = target.value
 
@@ -68,27 +68,36 @@ const handleKeydown = (index: number, event: KeyboardEvent) => {
 
 // VERIFY
 const verifyOTP = () => {
+  error.value = ''
+
   const finalOTP = otp.value.join('')
+  const savedOTP = localStorage.getItem('otp_code')
+  const expiry = localStorage.getItem('otp_expiry')
 
   if (finalOTP.length !== 6) {
-    error.value = 'OTP must be 6 digit!'
+    error.value = 'OTP must be 6 digits!'
     return
   }
 
-  if (finalOTP === correctOTP) {
-    localStorage.setItem('isLogin', 'true')
-    router.push({ name: 'dashboard' })
-  } else {
-    error.value = 'Wrong OTP!'
+  if (!expiry || Date.now() > Number(expiry)) {
+    error.value = 'OTP expired!'
+    return
   }
+
+  if (finalOTP !== savedOTP) {
+    error.value = 'Wrong OTP!'
+    return
+  }
+
+  // sukses
+  localStorage.removeItem('otp_code')
+  localStorage.removeItem('otp_expiry')
+
+  localStorage.setItem('isLogin', 'true')
+
+  router.push({ name: 'dashboard' })
 }
 
-const isOtpValid = computed(() => {
-  return otp.value.every(d => /^[0-9]$/.test(d))
-})
-
-
-// lifecycle
 onMounted(() => {
   startTimer()
 })
