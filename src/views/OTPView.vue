@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import logoFull from '@/assets/logo/full.png'
-import { computed } from 'vue'
 
 const router = useRouter()
 
@@ -10,41 +9,41 @@ const otp = ref(['', '', '', '', '', ''])
 const inputs = ref<(HTMLInputElement | null)[]>([])
 const error = ref('')
 
-const correctOTP = '123456'
-
 const timer = ref(180)
 let interval: ReturnType<typeof setInterval>
 
+// button validation
+const isOtpValid = computed(() => otp.value.every(d => d !== ''))
+
+// timer
 const startTimer = () => {
   interval = setInterval(() => {
-    if (timer.value > 0) {
-      timer.value--
-    }
+    if (timer.value > 0) timer.value--
   }, 1000)
 }
 
-// format mm:ss
+// time format
 const formatTime = () => {
-  const minutes = Math.floor(timer.value / 60)
-  const seconds = timer.value % 60
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  const m = Math.floor(timer.value / 60)
+  const s = timer.value % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
 }
 
+// resend (UI only)
 const resendOTP = () => {
   if (timer.value > 0) return
 
-  alert('New OTP Has Been Sent!')
+  alert('OTP resent (check console for now)')
 
-  // reset OTP input
   otp.value = ['', '', '', '', '', '']
-
-  // reset timer
   timer.value = 180
 }
 
-// INPUT HANDLER
-const handleInput = (index: number, event: Event) => {
-  const target = event.target as HTMLInputElement
+// input
+const handleInput = (index: number, e: Event) => {
+  error.value = ''
+
+  const target = e.target as HTMLInputElement
   const value = target.value
 
   if (!/^[0-9]$/.test(value)) {
@@ -54,42 +53,64 @@ const handleInput = (index: number, event: Event) => {
 
   otp.value[index] = value
 
-  if (index < 5) {
-    inputs.value[index + 1]?.focus()
-  }
+  if (index < 5) inputs.value[index + 1]?.focus()
 }
 
-// BACKSPACE
-const handleKeydown = (index: number, event: KeyboardEvent) => {
-  if (event.key === 'Backspace' && !otp.value[index] && index > 0) {
+// backspace
+const handleKeydown = (index: number, e: KeyboardEvent) => {
+  if (e.key === 'Backspace' && !otp.value[index] && index > 0) {
     inputs.value[index - 1]?.focus()
   }
 }
 
-// VERIFY
+// verify
 const verifyOTP = () => {
-  const finalOTP = otp.value.join('')
+  error.value = ''
 
+  const finalOTP = otp.value.join('')
+  const savedOTP = localStorage.getItem('otp_code')
+  const expiry = localStorage.getItem('otp_expiry')
+
+  // ✅ 1. VALIDASI PANJANG DULU
   if (finalOTP.length !== 6) {
-    error.value = 'OTP must be 6 digit!'
+    error.value = 'OTP must be 6 digits!'
     return
   }
 
-  if (finalOTP === correctOTP) {
-    localStorage.setItem('isLogin', 'true')
-    router.push({ name: 'dashboard' })
-  } else {
-    error.value = 'Wrong OTP!'
+  // ✅ 2. CEK ADA OTP
+  if (!savedOTP) {
+    error.value = 'No OTP found. Please login again.'
+    return
   }
+
+  // ✅ 3. BARU CEK EXPIRED
+  if (!expiry || Date.now() > Number(expiry)) {
+    error.value = 'OTP expired!'
+    return
+  }
+
+  // ✅ 4. CEK BENAR / SALAH
+  if (finalOTP !== savedOTP) {
+    error.value = 'Wrong OTP!'
+    return
+  }
+
+  // success
+  localStorage.removeItem('otp_code')
+  localStorage.removeItem('otp_expiry')
+  localStorage.setItem('isLogin', 'true')
+
+  router.push({ name: 'dashboard' })
 }
-
-const isOtpValid = computed(() => {
-  return otp.value.every(d => /^[0-9]$/.test(d))
-})
-
 
 // lifecycle
 onMounted(() => {
+  const expiry = localStorage.getItem('otp_expiry')
+
+  if (!expiry || Date.now() > Number(expiry)) {
+    error.value = 'OTP expired! Please login again.'
+  }
+
   startTimer()
 })
 

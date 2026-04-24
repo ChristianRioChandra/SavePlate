@@ -5,6 +5,7 @@ import logoFull from '@/assets/logo/full.png'
 import loginBackground from '@/assets/background/bg1.png'
 import { loginUser } from '../services/authService'
 import { isFirebaseError } from '@/utils/firebaseErrors'
+import { sendOTPEmail } from '@/services/emailService'
 
 const router = useRouter()
 
@@ -37,6 +38,7 @@ interface Benefit {
   title: string
   desc: string
 }
+
 
 const benefits: Benefit[] = [
   {
@@ -72,7 +74,6 @@ onUnmounted(() => {
 const handleLogin = async () => {
   error.value = ''
 
-  // Basic validation
   if (!email.value || !password.value) {
     error.value = 'Email and password are required!'
     return
@@ -83,42 +84,58 @@ const handleLogin = async () => {
   try {
     const user = await loginUser(email.value, password.value)
 
-    // Optional: warn user if email is not yet verified
+    const userEmail = user.email || email.value
+
+    console.log('FINAL EMAIL:', userEmail)
+
     if (!user.emailVerified) {
       error.value = 'Please verify your email before logging in.'
-      loading.value = false
       return
     }
 
-    router.push({ name: 'dashboard' })
+    console.log('SEND TO:', userEmail)
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString()
+    const expiryTime = Date.now() + 180000 // 3 menit
+
+    // save
+    localStorage.setItem('otp_code', otp)
+    localStorage.setItem('otp_expiry', expiryTime.toString())
+    localStorage.setItem('otp_email', userEmail)
+
+    console.log('OTP DEBUG:', otp)
+
+
+    sendOTPEmail(userEmail, otp)
+      .then(() => console.log('Email sent'))
+      .catch((err) => console.error('Email error:', err))
+
+    // route to OTP page
+    router.push('/otp')
+
   } catch (err: unknown) {
     if (isFirebaseError(err)) {
-      // Map Firebase error codes to friendly messages
       switch (err.code) {
         case 'auth/user-not-found':
           error.value = 'No account found with this email.'
           break
         case 'auth/wrong-password':
-          error.value = 'Incorrect password. Please try again.'
-          break
-        case 'auth/invalid-email':
-          error.value = 'Please enter a valid email address.'
-          break
-        case 'auth/invalid-credential':
-          error.value = 'Invalid email or password.'
-          break
-        case 'auth/too-many-requests':
-          error.value = 'Too many failed attempts. Please try again later.'
+          error.value = 'Incorrect password.'
           break
         default:
-          error.value = 'Login failed. Please try again.'
+          error.value = 'Login failed.'
       }
     } else {
-      loading.value = false
-      error.value = 'An unexpected error occurred. Please try again.'
+      console.error(err)
+      error.value = 'An unexpected error occurred.'
     }
+  } finally {
+    loading.value = false
   }
 }
+
+
 </script>
 
 <template>
