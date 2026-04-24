@@ -29,7 +29,7 @@ function filterListings(
     filterExpiryDays?: number | null
     currentFilter?: 'all' | 'near-expiry'
     currentSort?: 'name' | 'expiry'
-  }
+  },
 ): DonationItem[] {
   const {
     searchQuery = '',
@@ -134,7 +134,6 @@ const mockListings: DonationItem[] = [
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('PantryPalDonationListing — filteredListings', () => {
-
   // ── No filters ─────────────────────────────────────────────────────────────
 
   describe('no filters applied', () => {
@@ -155,14 +154,14 @@ describe('PantryPalDonationListing — filteredListings', () => {
     it('returns only listings matching pickup Kerobokan', () => {
       const result = filterListings(mockListings, { filterPickupLocation: 'Kerobokan' })
       expect(result).toHaveLength(1)
-      expect(result[0].id).toBe(3)
+      expect(result[0]!.id).toBe(3)
     })
 
     it('returns only listings matching pickup Ubud', () => {
       const result = filterListings(mockListings, { filterPickupLocation: 'Ubud' })
       expect(result).toHaveLength(1)
-      expect(result[0].id).toBe(5)
-      expect(result[0].title).toBe('Telur Kampung · 1 Dozen')
+      expect(result[0]!.id).toBe(5)
+      expect(result[0]!.title).toBe('Telur Kampung · 1 Dozen')
     })
 
     it('returns empty array when no listings match location', () => {
@@ -173,7 +172,7 @@ describe('PantryPalDonationListing — filteredListings', () => {
     it('is case-insensitive for location filter', () => {
       const result = filterListings(mockListings, { filterPickupLocation: 'kerobokan' })
       expect(result).toHaveLength(1)
-      expect(result[0].id).toBe(3)
+      expect(result[0]!.id).toBe(3)
     })
 
     it('returns all listings when location filter is empty string', () => {
@@ -196,14 +195,14 @@ describe('PantryPalDonationListing — filteredListings', () => {
     it('returns only Protein listings', () => {
       const result = filterListings(mockListings, { filterCategory: 'Protein' })
       expect(result).toHaveLength(1)
-      expect(result[0].id).toBe(5)
+      expect(result[0]!.id).toBe(5)
     })
 
     it('returns only Bread listings', () => {
       const result = filterListings(mockListings, { filterCategory: 'Bread' })
       expect(result).toHaveLength(1)
-      expect(result[0].id).toBe(6)
-      expect(result[0].title).toBe('Roti Tawar · 1 Loaf')
+      expect(result[0]!.id).toBe(6)
+      expect(result[0]!.title).toBe('Roti Tawar · 1 Loaf')
     })
 
     it('returns empty array when category does not exist', () => {
@@ -223,8 +222,8 @@ describe('PantryPalDonationListing — filteredListings', () => {
     it('returns only listings expiring today (0 days)', () => {
       const result = filterListings(mockListings, { filterExpiryDays: 0 })
       expect(result).toHaveLength(1)
-      expect(result[0].id).toBe(6)
-      expect(result[0].title).toBe('Roti Tawar · 1 Loaf')
+      expect(result[0]!.id).toBe(6)
+      expect(result[0]!.title).toBe('Roti Tawar · 1 Loaf')
     })
 
     it('returns listings expiring within 2 days', () => {
@@ -260,7 +259,7 @@ describe('PantryPalDonationListing — filteredListings', () => {
         filterCategory: 'Dairy',
       })
       expect(result).toHaveLength(1)
-      expect(result[0].id).toBe(3)
+      expect(result[0]!.id).toBe(3)
     })
 
     it('filters by category AND expiry days together', () => {
@@ -290,7 +289,7 @@ describe('PantryPalDonationListing — filteredListings', () => {
         filterExpiryDays: 3,
       })
       expect(result).toHaveLength(1)
-      expect(result[0].id).toBe(3)
+      expect(result[0]!.id).toBe(3)
     })
   })
 
@@ -300,25 +299,25 @@ describe('PantryPalDonationListing — filteredListings', () => {
     it('filters by title keyword', () => {
       const result = filterListings(mockListings, { searchQuery: 'Telur' })
       expect(result).toHaveLength(1)
-      expect(result[0].id).toBe(5)
+      expect(result[0]!.id).toBe(5)
     })
 
     it('filters by description keyword', () => {
       const result = filterListings(mockListings, { searchQuery: 'WhatsApp' })
       expect(result).toHaveLength(1)
-      expect(result[0].id).toBe(4)
+      expect(result[0]!.id).toBe(4)
     })
 
     it('filters by tag keyword', () => {
       const result = filterListings(mockListings, { searchQuery: 'Protein' })
       expect(result).toHaveLength(1)
-      expect(result[0].id).toBe(5)
+      expect(result[0]!.id).toBe(5)
     })
 
     it('is case-insensitive', () => {
       const result = filterListings(mockListings, { searchQuery: 'roti' })
       expect(result).toHaveLength(1)
-      expect(result[0].id).toBe(6)
+      expect(result[0]!.id).toBe(6)
     })
 
     it('returns empty when search matches nothing', () => {
@@ -339,7 +338,7 @@ describe('PantryPalDonationListing — filteredListings', () => {
     it('sorts by expiry days ascending', () => {
       const result = filterListings(mockListings, { currentSort: 'expiry' })
       for (let i = 0; i < result.length - 1; i++) {
-        expect(result[i].expiryDays ?? 999).toBeLessThanOrEqual(result[i + 1].expiryDays ?? 999)
+        expect(result[i]!.expiryDays ?? 999).toBeLessThanOrEqual(result[i + 1]!.expiryDays ?? 999)
       }
     })
 

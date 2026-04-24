@@ -27,7 +27,7 @@ const router = createRouter({
     {
       path: '/otp',
       name: 'otp',
-      component: () => import('../views/OTPView.vue')
+      component: () => import('../views/OTPView.vue'),
     },
 
     {
@@ -66,13 +66,25 @@ const router = createRouter({
       name: 'analytics',
       component: Analytics,
     },
+    {
+      path: '/notifications',
+      name: 'notifications',
+      component: () => import('../views/NotificationsView.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 
 // change from:
 router.beforeEach((to, from, next) => {
   const isLogin = localStorage.getItem('isLogin')
-  if (!isLogin && to.name !== 'login' && to.name !== 'register' && to.name !== 'otp' && to.path !== '/') {
+  if (
+    !isLogin &&
+    to.name !== 'login' &&
+    to.name !== 'register' &&
+    to.name !== 'otp' &&
+    to.path !== '/'
+  ) {
     next('/login')
   } else {
     next()
@@ -82,7 +94,13 @@ router.beforeEach((to, from, next) => {
 // to:
 router.beforeEach((to) => {
   const isLogin = localStorage.getItem('isLogin')
-  if (!isLogin && to.name !== 'login' && to.name !== 'register' && to.name !== 'otp' && to.path !== '/') {
+  if (
+    !isLogin &&
+    to.name !== 'login' &&
+    to.name !== 'register' &&
+    to.name !== 'otp' &&
+    to.path !== '/'
+  ) {
     return '/login'
   }
 })

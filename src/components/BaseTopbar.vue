@@ -15,7 +15,11 @@
       </div>
       <div class="action-icons">
         <slot name="actions">
-          <i class="bi bi-bell" title="Notifications"></i>
+          <i
+            class="bi bi-bell clickable"
+            title="Notifications"
+            @click="$emit('open-notifications')"
+          ></i>
           <i class="bi bi-gear clickable" @click="navigateToSettings" title="Settings"></i>
           <i class="bi bi-box-arrow-right clickable" @click="navigateToHome" title="Logout"></i>
         </slot>
@@ -33,9 +37,11 @@ defineProps<{
   title: string
   searchPlaceholder?: string
   searchValue?: string
+  unreadCount?: number
 }>()
 
 defineEmits<{
+  (e: 'open-notifications'): void
   (e: 'update:searchValue', value: string): void
 }>()
 

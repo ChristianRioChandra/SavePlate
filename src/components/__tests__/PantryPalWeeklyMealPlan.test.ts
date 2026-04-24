@@ -9,17 +9,17 @@ interface InventoryItem {
   icon: string
   name: string
   location: string
-  expiry: string       // display string e.g. '6 Apr 2026'
-  expiryDate?: Date    // parsed Date for sorting/grouping — added for testability
+  expiry: string // display string e.g. '6 Apr 2026'
+  expiryDate?: Date // parsed Date for sorting/grouping — added for testability
   tag?: string
-  warning?: boolean    // true = expiring soon
+  warning?: boolean // true = expiring soon
 }
 
 interface Recommendation {
   id: number
   icon: string
   name: string
-  uses: string         // comma-separated ingredient names
+  uses: string // comma-separated ingredient names
 }
 
 interface CalendarDay {
@@ -96,12 +96,17 @@ function groupInventoryByExpiry(items: InventoryItem[]): {
   later: InventoryItem[]
 } {
   const expiringSoon = items.filter((i) => i.warning === true)
-  const thisWeek = items.filter((i) => !i.warning && i.expiryDate !== undefined && (() => {
-    const daysUntil = Math.ceil(
-      (i.expiryDate!.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-    )
-    return daysUntil <= 7 && daysUntil > 3
-  })())
+  const thisWeek = items.filter(
+    (i) =>
+      !i.warning &&
+      i.expiryDate !== undefined &&
+      (() => {
+        const daysUntil = Math.ceil(
+          (i.expiryDate!.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24),
+        )
+        return daysUntil <= 7 && daysUntil > 3
+      })(),
+  )
   const later = items.filter((i) => !i.warning && !thisWeek.includes(i))
   return { expiringSoon, thisWeek, later }
 }
@@ -111,16 +116,23 @@ function groupInventoryByExpiry(items: InventoryItem[]): {
 
 function getRelevantRecommendations(
   recommendations: Recommendation[],
-  expiringItems: InventoryItem[]
+  expiringItems: InventoryItem[],
 ): Recommendation[] {
   if (expiringItems.length === 0) return recommendations
 
   const expiringNames = expiringItems.map((i) => i.name.toLowerCase())
 
   return recommendations.filter((rec) => {
-    const uses = rec.uses.toLowerCase().split(',').map((s) => s.trim())
+    const uses = rec.uses
+      .toLowerCase()
+      .split(',')
+      .map((s) => s.trim())
     return uses.some((ingredient) =>
-      expiringNames.some((expiring) => expiring.includes(ingredient) || ingredient.includes(expiring.split('·')[0].trim().toLowerCase()))
+      expiringNames.some(
+        (expiring) =>
+          expiring.includes(ingredient) ||
+          ingredient.includes(expiring.split('·')[0]!.trim().toLowerCase()),
+      ),
     )
   })
 }
@@ -136,7 +148,7 @@ const mockInventoryItems: InventoryItem[] = [
     expiry: '6 Apr 2026',
     expiryDate: new Date(2026, 3, 6),
     tag: '2d',
-    warning: true,   // expiring soon
+    warning: true, // expiring soon
   },
   {
     id: 2,
@@ -183,13 +195,10 @@ const mockRecommendations: Recommendation[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('GIVEN user is logged in and has inventory items', () => {
-
   describe('WHEN user navigates to Plan Weekly Meals page', () => {
-
     // ── Calendar ─────────────────────────────────────────────────────────────
 
     describe('THEN the system displays a calendar with at least one full week', () => {
-
       it('calendar contains exactly 42 cells (6 weeks × 7 days)', () => {
         const selectedDate = new Date(2026, 3, 14) // April 14 2026
         const days = buildCalendarDays(2026, 3, selectedDate)
@@ -225,7 +234,7 @@ describe('GIVEN user is logged in and has inventory items', () => {
             dayNumbers.includes(4) && // Thursday
             dayNumbers.includes(5) && // Friday
             dayNumbers.includes(6) && // Saturday
-            dayNumbers.includes(0)    // Sunday
+            dayNumbers.includes(0) // Sunday
           ) {
             foundCompleteWeek = true
             break
@@ -261,7 +270,7 @@ describe('GIVEN user is logged in and has inventory items', () => {
 
         const selected = days.filter((d) => d.isSelected)
         expect(selected).toHaveLength(1)
-        expect(selected[0].dayOfMonth).toBe(14)
+        expect(selected[0]!.dayOfMonth).toBe(14)
       })
 
       it('padding days from previous/next month are marked isCurrentMonth = false', () => {
@@ -278,7 +287,6 @@ describe('GIVEN user is logged in and has inventory items', () => {
     // ── Inventory sidebar ─────────────────────────────────────────────────────
 
     describe('THEN the sidebar shows inventory items grouped by expiry date', () => {
-
       it('all inventory items are present in the sidebar list', () => {
         expect(mockInventoryItems).toHaveLength(4)
         // Every item has required display fields
@@ -301,8 +309,8 @@ describe('GIVEN user is logged in and has inventory items', () => {
       it('expiring soon items are correctly identified (UltraMilk)', () => {
         const { expiringSoon } = groupInventoryByExpiry(mockInventoryItems)
         expect(expiringSoon).toHaveLength(1)
-        expect(expiringSoon[0].name).toBe('UltraMilk · 500ml Original')
-        expect(expiringSoon[0].tag).toBe('2d')
+        expect(expiringSoon[0]!.name).toBe('UltraMilk · 500ml Original')
+        expect(expiringSoon[0]!.tag).toBe('2d')
       })
 
       it('non-expiring items are separated from expiring-soon items', () => {
@@ -320,7 +328,7 @@ describe('GIVEN user is logged in and has inventory items', () => {
           if (!a.warning && b.warning) return 1
           return 0
         })
-        expect(sorted[0].warning).toBe(true)
+        expect(sorted[0]!.warning).toBe(true)
       })
 
       it('inventory search filters items by name', () => {
@@ -332,14 +340,13 @@ describe('GIVEN user is logged in and has inventory items', () => {
           const q = inventorySearch.value.toLowerCase()
           return items.value.filter(
             (item) =>
-              item.name.toLowerCase().includes(q) ||
-              item.location.toLowerCase().includes(q),
+              item.name.toLowerCase().includes(q) || item.location.toLowerCase().includes(q),
           )
         })
 
         inventorySearch.value = 'milk'
         expect(filteredInventory.value).toHaveLength(1)
-        expect(filteredInventory.value[0].name).toBe('UltraMilk · 500ml Original')
+        expect(filteredInventory.value[0]!.name).toBe('UltraMilk · 500ml Original')
       })
 
       it('inventory search filters items by location', () => {
@@ -350,20 +357,21 @@ describe('GIVEN user is logged in and has inventory items', () => {
           const q = inventorySearch.value.toLowerCase()
           return items.value.filter(
             (item) =>
-              item.name.toLowerCase().includes(q) ||
-              item.location.toLowerCase().includes(q),
+              item.name.toLowerCase().includes(q) || item.location.toLowerCase().includes(q),
           )
         })
 
         expect(filteredInventory.value).toHaveLength(1)
-        expect(filteredInventory.value[0].name).toBe('Loaf of Bread · 300g')
+        expect(filteredInventory.value[0]!.name).toBe('Loaf of Bread · 300g')
       })
 
       it('empty inventory search returns all items', () => {
         const inventorySearch = ref('')
         const items = ref(mockInventoryItems)
         const filteredInventory = computed(() =>
-          inventorySearch.value ? items.value.filter((i) => i.name.includes(inventorySearch.value)) : items.value
+          inventorySearch.value
+            ? items.value.filter((i) => i.name.includes(inventorySearch.value))
+            : items.value,
         )
         expect(filteredInventory.value).toHaveLength(4)
       })
@@ -375,8 +383,7 @@ describe('GIVEN user is logged in and has inventory items', () => {
           const q = inventorySearch.value.toLowerCase()
           return items.value.filter(
             (item) =>
-              item.name.toLowerCase().includes(q) ||
-              item.location.toLowerCase().includes(q),
+              item.name.toLowerCase().includes(q) || item.location.toLowerCase().includes(q),
           )
         })
         expect(filteredInventory.value).toHaveLength(0)
@@ -394,11 +401,8 @@ describe('GIVEN user is logged in and has inventory items', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('GIVEN user has inventory items with upcoming expiry dates', () => {
-
   describe('WHEN user navigates to the Recommendations section', () => {
-
     describe('THEN the system displays 2-3 recipe suggestions using expiring ingredients', () => {
-
       it('recommendations list contains between 2 and 3 items', () => {
         expect(mockRecommendations.length).toBeGreaterThanOrEqual(2)
         expect(mockRecommendations.length).toBeLessThanOrEqual(3)
@@ -429,9 +433,7 @@ describe('GIVEN user has inventory items with upcoming expiry dates', () => {
       })
 
       it('recommendations contain meals that use common expiring ingredients (Eggs)', () => {
-        const eggsRec = mockRecommendations.filter((r) =>
-          r.uses.toLowerCase().includes('eggs')
-        )
+        const eggsRec = mockRecommendations.filter((r) => r.uses.toLowerCase().includes('eggs'))
         expect(eggsRec.length).toBeGreaterThanOrEqual(1)
       })
 
@@ -444,7 +446,7 @@ describe('GIVEN user has inventory items with upcoming expiry dates', () => {
 
       it('returns only recommendations matching expiring ingredients', () => {
         // Only UltraMilk is expiring
-        const expiringItems = [mockInventoryItems[0]] // UltraMilk only
+        const expiringItems = [mockInventoryItems[0]!] // UltraMilk only
         const result = getRelevantRecommendations(mockRecommendations, expiringItems)
 
         // Only Milk Pancakes uses UltraMilk
@@ -477,7 +479,7 @@ describe('GIVEN user has inventory items with upcoming expiry dates', () => {
         planRecommendation(milkPancakes)
 
         // Should fill breakfast (first empty slot)
-        expect(mealSlots.value[0].meal).toBe('Milk Pancakes')
+        expect(mealSlots.value[0]!.meal).toBe('Milk Pancakes')
         expect(notifications.value[0]).toContain('Milk Pancakes')
         expect(notifications.value[0]).toContain('Breakfast')
       })
@@ -496,9 +498,9 @@ describe('GIVEN user has inventory items with upcoming expiry dates', () => {
         }
 
         // Breakfast is taken — should go to Lunch
-        planRecommendation(mockRecommendations[0])
-        expect(mealSlots.value[0].meal).toBe('Already planned') // unchanged
-        expect(mealSlots.value[1].meal).toBe('Nasi Goreng')     // filled
+        planRecommendation(mockRecommendations[0]!)
+        expect(mealSlots.value[0]!.meal).toBe('Already planned') // unchanged
+        expect(mealSlots.value[1]!.meal).toBe('Nasi Goreng') // filled
       })
 
       it('planRecommendation shows message when all slots are full', () => {
@@ -519,10 +521,9 @@ describe('GIVEN user has inventory items with upcoming expiry dates', () => {
           }
         }
 
-        planRecommendation(mockRecommendations[0])
+        planRecommendation(mockRecommendations[0]!)
         expect(notifications.value[0]).toBe('All slots are filled. Edit one to replace it.')
       })
-
     })
   })
 })

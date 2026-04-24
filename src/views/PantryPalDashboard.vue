@@ -1,6 +1,38 @@
 <template>
   <div class="dashboard-page">
-    <div class="dashboard">
+    <!-- ── Notification Popup Overlay ─────────────────────────────────────── -->
+    <Transition name="fade">
+      <div v-if="showNotifPopup" class="notif-overlay" @click.self="showNotifPopup = false">
+        <div class="notif-popup">
+          <div class="notif-popup-header">
+            <span class="notif-popup-title">Recent</span>
+            <button class="mark-read-btn" @click="markAllAsRead">Mark All As Read</button>
+          </div>
+          <div class="notif-popup-list">
+            <div
+              v-for="notif in notifications"
+              :key="notif.id"
+              class="notif-popup-item"
+              :class="{ unread: !notif.read }"
+            >
+              <div class="notif-item-icon">{{ notif.icon }}</div>
+              <div class="notif-item-body">
+                <div class="notif-item-title">{{ notif.title }}</div>
+                <div class="notif-item-detail">{{ notif.detail }}</div>
+                <div class="notif-item-date">{{ notif.date }}, {{ notif.time }}</div>
+              </div>
+              <div v-if="!notif.read" class="notif-unread-dot"></div>
+            </div>
+            <div v-if="notifications.length === 0" class="notif-empty">No new notifications</div>
+          </div>
+          <button class="notif-view-all-btn" @click="viewAllNotifications">
+            View All Notification
+          </button>
+        </div>
+      </div>
+    </Transition>
+
+    <div class="dashboard" :class="{ blurred: showNotifPopup }">
       <BaseSidebar :nav-items="navItems" />
 
       <div class="main-content">
@@ -8,6 +40,8 @@
           title="Dashboard"
           search-placeholder="Search food, donations, meals..."
           v-model:search-value="searchQuery"
+          :unread-count="unreadCount"
+          @open-notifications="showNotifPopup = true"
         />
 
         <div class="dashboard-grid">
@@ -45,7 +79,9 @@
                 <span class="inv-tag" :class="{ warn: item.warning }">{{ item.tag }}</span>
               </div>
             </div>
-            <button class="card-action-btn" @click="router.push('/inventory')">Manage Inventory →</button>
+            <button class="card-action-btn" @click="router.push('/inventory')">
+              Manage Inventory →
+            </button>
           </div>
 
           <!-- Meal Plan Summary -->
@@ -71,7 +107,9 @@
               <div class="meal-slot-label">Dinner</div>
               <div class="meal-slot-name">Shrimp Fried Rice</div>
             </div>
-            <button class="card-action-btn" @click="router.push('/meal-plan')">Manage Plan →</button>
+            <button class="card-action-btn" @click="router.push('/meal-plan')">
+              Manage Plan →
+            </button>
           </div>
 
           <!-- Recommendations -->
@@ -125,6 +163,55 @@ import BaseRightSidebar from '@/components/BaseRightSidebar.vue'
 import type { NavItem } from '@/components/BaseSidebar.vue'
 
 const router = useRouter()
+
+// ─── Notification popup ───────────────────────────────────────────────────────
+const showNotifPopup = ref(false)
+
+interface NotifItem {
+  id: number
+  icon: string
+  title: string
+  type: string
+  detail: string
+  date: string
+  time: string
+  read: boolean
+}
+
+const notifications = ref<NotifItem[]>([
+  {
+    id: 1,
+    icon: '🥛',
+    title: 'Milk about to Expire',
+    type: 'Expiry Notification',
+    detail: 'Milk about to Expire',
+    date: '31 March 2026',
+    time: '09:30 AM',
+    read: false,
+  },
+  {
+    id: 2,
+    icon: '🍞',
+    title: 'Bread about to Expire',
+    type: 'Expiry Notification',
+    detail: 'Bread is expiring in 1 day. Use or donate it.',
+    date: '31 March 2026',
+    time: '08:00 AM',
+    read: true,
+  },
+])
+
+const unreadCount = ref(notifications.value.filter((n) => !n.read).length)
+
+function markAllAsRead() {
+  notifications.value.forEach((n) => (n.read = true))
+  unreadCount.value = 0
+}
+
+function viewAllNotifications() {
+  showNotifPopup.value = false
+  router.push('/notifications')
+}
 
 interface InventoryItem {
   id: number
@@ -629,6 +716,170 @@ hr {
 
 .stat-item .warning {
   color: #d97706;
+}
+
+/* ── Notification Popup ────────────────────────────────────────────────────── */
+.notif-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(10, 28, 47, 0.35);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 80px 48px 0 0;
+}
+
+.notif-popup {
+  background: #ffffff;
+  border-radius: 20px;
+  width: 360px;
+  box-shadow: 0 20px 60px rgba(10, 28, 47, 0.18);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.notif-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.notif-popup-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #0a1c2f;
+}
+
+.mark-read-btn {
+  background: none;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #2c7a4d;
+  cursor: pointer;
+}
+
+.mark-read-btn:hover {
+  text-decoration: underline;
+}
+
+.notif-popup-list {
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.notif-popup-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  position: relative;
+  transition: background 0.15s;
+}
+
+.notif-popup-item:hover {
+  background: #f8fafc;
+}
+
+.notif-popup-item.unread {
+  background: #f0f7ff;
+}
+
+.notif-item-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e8f5e9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  border: 1.5px solid #c8e6c9;
+}
+
+.notif-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-item-title {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: #0a1c2f;
+  margin-bottom: 2px;
+}
+
+.notif-item-detail {
+  font-size: 0.78rem;
+  color: #577190;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notif-item-date {
+  font-size: 0.72rem;
+  color: #9aafc4;
+}
+
+.notif-unread-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2c7a4d;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.notif-empty {
+  padding: 24px;
+  text-align: center;
+  color: #9aafc4;
+  font-size: 0.88rem;
+}
+
+.notif-view-all-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-top: 1px solid #edf2f7;
+  background: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #2c7a4d;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s;
+}
+
+.notif-view-all-btn:hover {
+  background: #f0fdf4;
+}
+
+/* Blur the dashboard content when popup is open */
+.dashboard.blurred {
+  filter: blur(2px);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Transition */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
 /* Responsive */

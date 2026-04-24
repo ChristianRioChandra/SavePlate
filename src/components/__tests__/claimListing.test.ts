@@ -25,7 +25,7 @@ interface DonationItem {
 function createClaimStore(initialListings: DonationItem[]) {
   const allListings = ref<DonationItem[]>([...initialListings])
   const claimedIds = ref<Set<number>>(new Set())
-  const notifications = ref<string[]>([])  // captures notifyMessage calls
+  const notifications = ref<string[]>([]) // captures notifyMessage calls
 
   const notifyMessage = (msg: string) => {
     notifications.value.push(msg)
@@ -70,11 +70,9 @@ const anotherListing: DonationItem = {
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('claimListing — Request/Claim donation', () => {
-
   // ── GIVEN: a listing is available ──────────────────────────────────────────
 
   describe('GIVEN a user views a specific donation listing that is still available', () => {
-
     it('the listing exists in allListings before any action', () => {
       const { allListings } = createClaimStore([availableListing])
 
@@ -96,13 +94,11 @@ describe('claimListing — Request/Claim donation', () => {
       const isDisabled = claimedIds.value.has(availableListing.id)
       expect(isDisabled).toBe(false)
     })
-
   })
 
   // ── WHEN: user clicks Claim and confirms ────────────────────────────────────
 
   describe('WHEN the user clicks the Claim button and confirms the action', () => {
-
     it('claimListing is called with the correct listing id', () => {
       const { claimListing, claimedIds } = createClaimStore([availableListing])
 
@@ -111,13 +107,11 @@ describe('claimListing — Request/Claim donation', () => {
       // Confirm it was registered
       expect(claimedIds.value.has(availableListing.id)).toBe(true)
     })
-
   })
 
   // ── THEN: listing status changes to Claimed ─────────────────────────────────
 
   describe('THEN the system changes the listing status to Claimed', () => {
-
     it('adds the listing id to claimedIds', () => {
       const { claimListing, claimedIds } = createClaimStore([availableListing])
 
@@ -149,8 +143,8 @@ describe('claimListing — Request/Claim donation', () => {
       claimListing(availableListing.id)
 
       expect(allListings.value).toHaveLength(1)
-      expect(allListings.value[0].id).toBe(anotherListing.id)
-      expect(allListings.value[0].title).toBe('Telur Kampung · 1 Dozen')
+      expect(allListings.value[0]!.id).toBe(anotherListing.id)
+      expect(allListings.value[0]!.title).toBe('Telur Kampung · 1 Dozen')
     })
 
     it('Claim button becomes disabled after claiming (claimedIds check)', () => {
@@ -172,13 +166,11 @@ describe('claimListing — Request/Claim donation', () => {
       const label = claimedIds.value.has(availableListing.id) ? '✓ Claimed' : 'Claim'
       expect(label).toBe('✓ Claimed')
     })
-
   })
 
   // ── THEN: confirmation notification is sent ─────────────────────────────────
 
   describe('THEN a confirmation notification is sent to the claiming user', () => {
-
     it('notifyMessage is called after claiming', () => {
       const { claimListing, notifications } = createClaimStore([availableListing])
 
@@ -202,13 +194,11 @@ describe('claimListing — Request/Claim donation', () => {
 
       expect(notifications.value[0]).toContain('donor will be notified')
     })
-
   })
 
   // ── Edge cases ──────────────────────────────────────────────────────────────
 
   describe('edge cases', () => {
-
     it('prevents claiming the same listing twice', () => {
       const { claimListing, notifications } = createClaimStore([availableListing])
 
@@ -253,7 +243,5 @@ describe('claimListing — Request/Claim donation', () => {
       expect(claimedIds.value.has(anotherListing.id)).toBe(true)
       expect(allListings.value).toHaveLength(0)
     })
-
   })
-
 })
