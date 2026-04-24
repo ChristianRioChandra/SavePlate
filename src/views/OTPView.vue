@@ -12,24 +12,24 @@ const error = ref('')
 const timer = ref(180)
 let interval: ReturnType<typeof setInterval>
 
-// ✅ validasi tombol
+// button validation
 const isOtpValid = computed(() => otp.value.every(d => d !== ''))
 
-// ⏱ timer
+// timer
 const startTimer = () => {
   interval = setInterval(() => {
     if (timer.value > 0) timer.value--
   }, 1000)
 }
 
-// ⏱ format waktu
+// time format
 const formatTime = () => {
   const m = Math.floor(timer.value / 60)
   const s = timer.value % 60
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-// 🔁 resend (UI only)
+// resend (UI only)
 const resendOTP = () => {
   if (timer.value > 0) return
 
@@ -39,7 +39,7 @@ const resendOTP = () => {
   timer.value = 180
 }
 
-// ⌨ input
+// input
 const handleInput = (index: number, e: Event) => {
   error.value = ''
 
@@ -56,14 +56,14 @@ const handleInput = (index: number, e: Event) => {
   if (index < 5) inputs.value[index + 1]?.focus()
 }
 
-// ⌫ backspace
+// backspace
 const handleKeydown = (index: number, e: KeyboardEvent) => {
   if (e.key === 'Backspace' && !otp.value[index] && index > 0) {
     inputs.value[index - 1]?.focus()
   }
 }
 
-// ✅ VERIFY
+// verify
 const verifyOTP = () => {
   error.value = ''
 
@@ -71,25 +71,33 @@ const verifyOTP = () => {
   const savedOTP = localStorage.getItem('otp_code')
   const expiry = localStorage.getItem('otp_expiry')
 
+  // ✅ 1. VALIDASI PANJANG DULU
   if (finalOTP.length !== 6) {
     error.value = 'OTP must be 6 digits!'
     return
   }
 
+  // ✅ 2. CEK ADA OTP
+  if (!savedOTP) {
+    error.value = 'No OTP found. Please login again.'
+    return
+  }
+
+  // ✅ 3. BARU CEK EXPIRED
   if (!expiry || Date.now() > Number(expiry)) {
     error.value = 'OTP expired!'
     return
   }
 
+  // ✅ 4. CEK BENAR / SALAH
   if (finalOTP !== savedOTP) {
     error.value = 'Wrong OTP!'
     return
   }
 
-  // sukses
+  // success
   localStorage.removeItem('otp_code')
   localStorage.removeItem('otp_expiry')
-
   localStorage.setItem('isLogin', 'true')
 
   router.push({ name: 'dashboard' })

@@ -86,7 +86,7 @@ const handleLogin = async () => {
 
     const userEmail = user.email || email.value
 
-    console.log('📧 FINAL EMAIL:', userEmail)
+    console.log('FINAL EMAIL:', userEmail)
 
     if (!user.emailVerified) {
       error.value = 'Please verify your email before logging in.'
