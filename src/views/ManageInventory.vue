@@ -1002,7 +1002,7 @@
 
 <script setup lang="ts">
 import type { NavItem } from '@/components/BaseSidebar.vue'
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import BaseSidebar from '@/components/BaseSidebar.vue'
 import BaseTopbar from '@/components/BaseTopbar.vue'
 import { addLocalAnalyticsEvent, addLocalAnalyticsEvents } from '@/services/localAnalyticsStore'
@@ -1084,6 +1084,140 @@ const expandedCategories = ref({
   freezer: false,
   countertop: false,
   expiry: false,
+})
+
+// Local Storage Keys
+const STORAGE_KEYS = {
+  INVENTORY: 'pantryPal_inventory',
+  NEXT_ID: 'pantryPal_nextId',
+  SELECTED_DONATIONS: 'pantryPal_selectedDonations',
+  EXPANDED_CATEGORIES: 'pantryPal_expandedCategories',
+  INVENTORY_LAYOUT: 'pantryPal_inventoryLayout',
+  CURRENT_FILTER: 'pantryPal_currentFilter',
+  CURRENT_SORT: 'pantryPal_currentSort',
+}
+
+// Local Storage Functions - Automatically saves/loads inventory data
+// Similar to: localStorage.setItem('name', 'Alex'), localStorage.getItem('name'), etc.
+
+// Local Storage Functions
+function saveToLocalStorage<T>(key: string, value: T) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch (error) {
+    console.error('Error saving to localStorage:', error)
+  }
+}
+
+function loadFromLocalStorage<T>(key: string, defaultValue: T): T {
+  try {
+    const item = localStorage.getItem(key)
+    return item ? JSON.parse(item) : defaultValue
+  } catch (error) {
+    console.error('Error loading from localStorage:', error)
+    return defaultValue
+  }
+}
+
+function removeFromLocalStorage(key: string) {
+  try {
+    localStorage.removeItem(key)
+  } catch (error) {
+    console.error('Error removing from localStorage:', error)
+  }
+}
+
+function clearLocalStorage() {
+  try {
+    Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key))
+  } catch (error) {
+    console.error('Error clearing localStorage:', error)
+  }
+}
+
+// Expose localStorage functions (similar to user's examples)
+function saveInventoryData<T>(key: string, value: T) {
+  saveToLocalStorage(key, value)
+}
+
+function loadInventoryData<T>(key: string, defaultValue: T): T {
+  return loadFromLocalStorage(key, defaultValue)
+}
+
+function removeInventoryData(key: string) {
+  removeFromLocalStorage(key)
+}
+
+function clearAllInventoryData() {
+  clearLocalStorage()
+}
+
+// Load data from localStorage on mount
+onMounted(() => {
+  // Load inventory
+  const savedInventory = loadFromLocalStorage(STORAGE_KEYS.INVENTORY, [])
+  if (savedInventory.length > 0) {
+    inventory.value = savedInventory
+  }
+
+  // Load nextId
+  const savedNextId = loadFromLocalStorage(STORAGE_KEYS.NEXT_ID, 100)
+  nextId.value = savedNextId
+
+  // Load selected donations
+  const savedDonations = loadFromLocalStorage(STORAGE_KEYS.SELECTED_DONATIONS, [])
+  selectedDonationIds.value = new Set(savedDonations)
+
+  // Load expanded categories
+  const savedExpanded = loadFromLocalStorage(STORAGE_KEYS.EXPANDED_CATEGORIES, {
+    all: false,
+    fridge: true,
+    pantry: false,
+    freezer: false,
+    countertop: false,
+    expiry: false,
+  })
+  expandedCategories.value = savedExpanded
+
+  // Load layout
+  const savedLayout = loadFromLocalStorage(STORAGE_KEYS.INVENTORY_LAYOUT, 'cards')
+  inventoryLayout.value = savedLayout
+
+  // Load filter and sort
+  const savedFilter = loadFromLocalStorage(STORAGE_KEYS.CURRENT_FILTER, 'all')
+  currentFilter.value = savedFilter
+
+  const savedSort = loadFromLocalStorage(STORAGE_KEYS.CURRENT_SORT, 'name')
+  currentSort.value = savedSort
+})
+
+// Watchers to save data to localStorage
+watch(inventory, (newInventory) => {
+  saveToLocalStorage(STORAGE_KEYS.INVENTORY, newInventory)
+}, { deep: true })
+
+watch(nextId, (newNextId) => {
+  saveToLocalStorage(STORAGE_KEYS.NEXT_ID, newNextId)
+})
+
+watch(selectedDonationIds, (newSelected) => {
+  saveToLocalStorage(STORAGE_KEYS.SELECTED_DONATIONS, Array.from(newSelected))
+}, { deep: true })
+
+watch(expandedCategories, (newExpanded) => {
+  saveToLocalStorage(STORAGE_KEYS.EXPANDED_CATEGORIES, newExpanded)
+}, { deep: true })
+
+watch(inventoryLayout, (newLayout) => {
+  saveToLocalStorage(STORAGE_KEYS.INVENTORY_LAYOUT, newLayout)
+})
+
+watch(currentFilter, (newFilter) => {
+  saveToLocalStorage(STORAGE_KEYS.CURRENT_FILTER, newFilter)
+})
+
+watch(currentSort, (newSort) => {
+  saveToLocalStorage(STORAGE_KEYS.CURRENT_SORT, newSort)
 })
 
 const addModalOpen = ref(false)
