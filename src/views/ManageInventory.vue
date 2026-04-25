@@ -229,11 +229,104 @@
       </div>
     </div>
 
+    <div v-if="mobileFilterModalOpen" class="modal-overlay mobile-filter-overlay" style="display: flex">
+      <div class="modal-box mobile-filter-box">
+        <div class="mobile-filter-header">
+          <div>
+            <h2>Refine Inventory</h2>
+            <p>Choose a storage filter and sorting mode.</p>
+          </div>
+          <button type="button" class="mobile-filter-close" @click="closeMobileFilterModal">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+
+        <div class="mobile-filter-group">
+          <span class="mobile-filter-label">Storage</span>
+          <div class="mobile-filter-grid">
+            <button
+              v-for="mode in filterModes"
+              :key="mode"
+              type="button"
+              class="mobile-filter-chip"
+              :class="{ active: currentFilter === mode }"
+              @click="currentFilter = mode"
+            >
+              {{ getFilterLabel(mode) }}
+            </button>
+          </div>
+        </div>
+
+        <div class="mobile-filter-group">
+          <span class="mobile-filter-label">Sort By</span>
+          <div class="mobile-filter-grid sort-grid">
+            <button
+              v-for="mode in sortModes"
+              :key="mode"
+              type="button"
+              class="mobile-filter-chip"
+              :class="{ active: currentSort === mode }"
+              @click="currentSort = mode"
+            >
+              {{ getSortLabel(mode) }}
+            </button>
+          </div>
+        </div>
+
+        <div class="mobile-filter-actions">
+          <button type="button" class="modal-cancel" @click="resetMobileFilters">Reset</button>
+          <button type="button" class="modal-add" @click="closeMobileFilterModal">Apply</button>
+        </div>
+      </div>
+    </div>
+
     <div class="dashboard">
       <BaseSidebar :nav-items="navItems" />
 
       <div class="main-content">
+        <section class="mobile-top-shell">
+          <div class="mobile-header-row">
+            <button type="button" class="mobile-back-btn" @click="goBack">
+              <i class="bi bi-arrow-left"></i>
+            </button>
+            <h1>Manage Inventory</h1>
+          </div>
+
+          <div class="mobile-search-row">
+            <div class="mobile-search-shell">
+              <i class="bi bi-search"></i>
+              <input
+                v-model="searchQuery"
+                type="text"
+                placeholder="Search inventory"
+                aria-label="Search inventory"
+              />
+            </div>
+            <button type="button" class="mobile-icon-btn" @click="cycleSortMode">
+              <i class="bi bi-arrow-down-up"></i>
+              <span>{{ getSortLabel(currentSort) }}</span>
+            </button>
+          </div>
+
+          <div class="mobile-chip-row" aria-label="Inventory quick filters">
+            <button
+              v-for="mode in mobileQuickFilters"
+              :key="mode"
+              type="button"
+              class="mobile-quick-chip"
+              :class="{ active: currentFilter === mode }"
+              @click="currentFilter = mode"
+            >
+              {{ getFilterLabel(mode) }}
+            </button>
+            <button type="button" class="mobile-filter-trigger" @click="openMobileFilterModal">
+              <i class="bi bi-sliders2"></i>
+            </button>
+          </div>
+        </section>
+
         <BaseTopbar
+          class="desktop-topbar"
           title="Manage Inventory"
           search-placeholder="Search any food (milk, rice, ice cream...)"
           v-model:search-value="searchQuery"
@@ -997,18 +1090,37 @@
         <div class="floating-add" id="addRight" @click="openAddModal">+</div>
       </aside>
     </div>
+
+    <button type="button" class="mobile-floating-add" @click="openAddModal" aria-label="Add item">
+      <i class="bi bi-plus-lg"></i>
+    </button>
+
+    <nav class="mobile-bottom-nav" aria-label="Primary navigation">
+      <button
+        v-for="item in mobileNavItems"
+        :key="item.route"
+        type="button"
+        class="mobile-nav-item"
+        :class="{ active: isRouteActive(item.route) }"
+        @click="navigateTo(item.route)"
+      >
+        <i v-if="item.icon" :class="item.icon"></i>
+        <span>{{ item.label }}</span>
+      </button>
+    </nav>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { NavItem } from '@/components/BaseSidebar.vue'
 import { ref, computed, watch, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import BaseSidebar from '@/components/BaseSidebar.vue'
 import BaseTopbar from '@/components/BaseTopbar.vue'
 import { addLocalAnalyticsEvent, addLocalAnalyticsEvents } from '@/services/localAnalyticsStore'
 
 const route = useRoute()
+const router = useRouter()
 
 // Navigation items
 const navItems: NavItem[] = [
@@ -1079,6 +1191,7 @@ const compactStorageColumns = [
 
 const searchQuery = ref('')
 const selectedDonationIds = ref<Set<string>>(new Set())
+const mobileFilterModalOpen = ref(false)
 
 const expandedCategories = ref({
   all: false,
@@ -1298,6 +1411,8 @@ function recordInventoryAnalytics(item: InventoryItem, kind: 'used' | 'donated')
 // ---------- Computed ----------
 
 const qtyProgress = computed(() => qtyMap[selectedQuantityLevel.value])
+const mobileQuickFilters = computed(() => filterModes.slice(0, 4))
+const mobileNavItems = computed(() => navItems.slice(0, 5))
 
 const todayDate = computed(() => {
   const d = new Date()
@@ -1390,6 +1505,36 @@ function isHiddenBySearch(item: InventoryItem): boolean {
 
 function toggleCategory(cat: keyof typeof expandedCategories.value) {
   expandedCategories.value[cat] = !expandedCategories.value[cat]
+}
+
+function openMobileFilterModal() {
+  mobileFilterModalOpen.value = true
+}
+
+function closeMobileFilterModal() {
+  mobileFilterModalOpen.value = false
+}
+
+function resetMobileFilters() {
+  currentFilter.value = 'all'
+  currentSort.value = 'name'
+}
+
+function navigateTo(routePath: string) {
+  router.push(routePath)
+}
+
+function isRouteActive(routePath: string) {
+  if (routePath === '/') return route.path === '/'
+  return route.path.startsWith(routePath)
+}
+
+function goBack() {
+  if (window.history.length > 1) {
+    router.back()
+    return
+  }
+  router.push('/dashboard')
 }
 
 function escapeHtml(str: string): string {
@@ -2391,7 +2536,7 @@ hr {
   display: inline-block;
   padding: 6px 12px;
   border-radius: 20px;
-  font-size: 0.82rem;
+  font-size: 0.62rem;
   font-weight: 600;
   white-space: nowrap;
   max-width: 100%;
@@ -3063,6 +3208,254 @@ footer {
   margin-right: 20px;
 }
 
+.mobile-top-shell,
+.mobile-bottom-nav,
+.mobile-floating-add {
+  display: none;
+}
+
+.desktop-topbar {
+  display: block;
+}
+
+.mobile-top-shell {
+  background: linear-gradient(180deg, #ffffff 0%, #f7faf7 100%);
+  border: 1px solid #e3ebdf;
+  border-radius: 28px;
+  padding: 18px;
+  margin-bottom: 18px;
+  box-shadow: 0 18px 32px rgba(31, 47, 62, 0.05);
+}
+
+.mobile-header-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.mobile-header-row h1 {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: #0a1c2f;
+}
+
+.mobile-back-btn,
+.mobile-icon-btn,
+.mobile-filter-trigger,
+.mobile-filter-close {
+  border: none;
+  background: #f2f5f0;
+  color: #173b2d;
+  border-radius: 16px;
+  cursor: pointer;
+}
+
+.mobile-back-btn,
+.mobile-filter-close {
+  width: 46px;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex: 0 0 46px;
+}
+
+.mobile-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.mobile-search-shell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  border-radius: 18px;
+  border: 1px solid #e4e9ef;
+  background: #fbfcff;
+  padding: 0 16px;
+}
+
+.mobile-search-shell i {
+  color: #6b7e93;
+}
+
+.mobile-search-shell input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.95rem;
+  font-family: 'Inter', sans-serif;
+}
+
+.mobile-icon-btn {
+  min-height: 52px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.mobile-chip-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.mobile-chip-row::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-quick-chip,
+.mobile-filter-chip {
+  border: 1px solid #dce4de;
+  background: #ffffff;
+  color: #48617c;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mobile-quick-chip.active,
+.mobile-filter-chip.active {
+  background: #2c7a4d;
+  border-color: #2c7a4d;
+  color: #ffffff;
+}
+
+.mobile-filter-trigger {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 44px;
+}
+
+.mobile-filter-overlay {
+  align-items: flex-end;
+}
+
+.mobile-filter-box {
+  max-width: 620px;
+  border-radius: 28px 28px 0 0;
+  padding-bottom: 24px;
+}
+
+.mobile-filter-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.mobile-filter-header p {
+  margin-top: 4px;
+  color: #6b7e93;
+  font-size: 0.92rem;
+}
+
+.mobile-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mobile-filter-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #48617c;
+  letter-spacing: 0.04em;
+}
+
+.mobile-filter-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sort-grid .mobile-filter-chip {
+  min-width: 96px;
+  text-align: center;
+}
+
+.mobile-filter-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.mobile-bottom-nav {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 40;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #deebe2;
+  border-radius: 24px;
+  box-shadow: 0 16px 44px rgba(31, 47, 62, 0.12);
+  padding: 8px 10px;
+  backdrop-filter: blur(16px);
+}
+
+.mobile-nav-item {
+  border: none;
+  background: transparent;
+  color: #6b7e93;
+  min-height: 58px;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mobile-nav-item i {
+  font-size: 1.35rem;
+}
+
+.mobile-nav-item.active {
+  color: #2c7a4d;
+  background: #eef7f1;
+}
+
+.mobile-floating-add {
+  position: fixed;
+  right: 18px;
+  bottom: 104px;
+  z-index: 41;
+  width: 68px;
+  height: 68px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #3b8856 0%, #2c7a4d 100%);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 18px 38px rgba(44, 122, 77, 0.28);
+  cursor: pointer;
+  font-size: 1.4rem;
+  display: none;
+}
+
 @media (max-width: 1320px) {
   .dashboard {
     grid-template-columns: clamp(190px, 20vw, 240px) minmax(0, 1fr);
@@ -3095,47 +3488,39 @@ footer {
   }
 
   .sidebar {
-    position: sticky;
-    top: 24px;
-    align-self: start;
-    z-index: 1;
+    display: none;
   }
 
-  .top-bar {
-    padding: 18px 24px;
+  .manage-inventory-page {
+    padding-bottom: 112px;
   }
 
-  .main-content :deep(.top-bar) {
-    padding: 18px 24px;
+  .desktop-topbar {
+    display: none;
   }
 
-  .top-bar-actions {
-    min-width: 100%;
-    justify-content: stretch;
+  .mobile-top-shell,
+  .mobile-bottom-nav,
+  .mobile-floating-add {
+    display: block;
   }
 
-  .main-content :deep(.top-bar-actions) {
-    min-width: 100%;
-    justify-content: stretch;
-  }
-
-  .search-wrapper {
-    flex: 1;
-  }
-
-  .main-content :deep(.search-wrapper) {
-    width: 100%;
+  .mobile-bottom-nav {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .right-sidebar {
-    grid-column: 1 / -1;
-    position: sticky;
-    top: 24px;
-    align-self: start;
-    z-index: 1;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    align-items: start;
+    display: none;
+  }
+
+  .layout-toggle-bar {
+    justify-content: stretch;
+    margin: 0 0 18px;
+  }
+
+  .layout-toggle {
+    width: 100%;
   }
 }
 
@@ -3188,7 +3573,7 @@ footer {
 
 @media (max-width: 780px) {
   .manage-inventory-page {
-    padding: 14px;
+    padding: 14px 14px 112px;
   }
 
   .modal-overlay {
@@ -3255,62 +3640,36 @@ footer {
     gap: 18px;
   }
 
-  .sidebar {
-    border-radius: 26px;
-    padding: 18px 16px;
-  }
-
-  .logo-icon {
-    width: 42px;
-    height: 42px;
-    font-size: 21px;
-  }
-
-  .logo-text {
-    font-size: 1.32rem;
-  }
-
-  .nav-item {
-    padding: 12px 14px;
-    font-size: 0.92rem;
-  }
-
-  .top-bar {
-    padding: 16px 18px;
+  .mobile-top-shell {
     border-radius: 24px;
+    padding: 16px;
   }
 
-  .page-title h2 {
-    font-size: 1.7rem;
+  .mobile-header-row h1 {
+    font-size: 1.6rem;
   }
 
-  .main-content :deep(.page-title h2) {
-    font-size: 1.7rem;
+  .mobile-search-row {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .top-bar-actions {
-    gap: 10px;
-  }
-
-  .layout-toggle-bar {
-    justify-content: stretch;
-    margin-top: -10px;
-  }
-
-  .layout-toggle {
+  .mobile-icon-btn {
     width: 100%;
+    justify-content: center;
   }
 
-  .search-wrapper {
-    min-width: 0;
-    width: 100%;
-    min-height: 46px;
+  .mobile-bottom-nav {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    border-radius: 22px;
   }
 
-  .action-icons {
-    width: 42px;
-    height: 42px;
-    flex: 0 0 42px;
+  .mobile-floating-add {
+    right: 16px;
+    bottom: 96px;
+    width: 64px;
+    height: 64px;
   }
 
   .food-grid {
@@ -3374,16 +3733,6 @@ footer {
     justify-content: center;
   }
 
-  .right-sidebar {
-    grid-template-columns: 1fr;
-    gap: 14px;
-  }
-
-  .right-box {
-    border-radius: 22px;
-    padding: 16px;
-  }
-
   .floating-add {
     min-height: 76px;
     font-size: 2rem;
@@ -3393,7 +3742,7 @@ footer {
 
 @media (max-width: 560px) {
   .manage-inventory-page {
-    padding: 12px;
+    padding: 12px 12px 108px;
   }
 
   .modal-overlay {
@@ -3458,6 +3807,76 @@ footer {
   .modal-actions {
     gap: 10px;
     margin-top: 12px;
+  }
+
+  .mobile-top-shell {
+    padding: 14px;
+    border-radius: 22px;
+    margin-bottom: 14px;
+  }
+
+  .mobile-header-row {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .mobile-header-row h1 {
+    font-size: 1.38rem;
+  }
+
+  .mobile-back-btn,
+  .mobile-filter-close {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+  }
+
+  .mobile-search-shell {
+    min-height: 48px;
+    padding: 0 14px;
+  }
+
+  .mobile-icon-btn {
+    min-height: 46px;
+    font-size: 0.82rem;
+  }
+
+  .mobile-quick-chip,
+  .mobile-filter-chip {
+    padding: 9px 12px;
+    font-size: 0.78rem;
+  }
+
+  .mobile-filter-box {
+    border-radius: 24px 24px 0 0;
+    padding: 18px 18px 20px;
+  }
+
+  .mobile-filter-header p {
+    font-size: 0.84rem;
+  }
+
+  .mobile-filter-actions {
+    flex-direction: column;
+  }
+
+  .mobile-bottom-nav {
+    padding: 8px;
+  }
+
+  .mobile-nav-item {
+    min-height: 54px;
+    font-size: 0.66rem;
+  }
+
+  .mobile-nav-item i {
+    font-size: 1.2rem;
+  }
+
+  .mobile-floating-add {
+    width: 60px;
+    height: 60px;
+    bottom: 92px;
   }
 
   .modal-cancel,
