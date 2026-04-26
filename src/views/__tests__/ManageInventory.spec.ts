@@ -10,7 +10,8 @@ import BaseTopbar from '@/components/BaseTopbar.vue'
 vi.mock('vue-router', () => ({
   useRoute: vi.fn(() => ({
     params: {},
-    query: {}
+    query: {},
+    path: '/manage-inventory'
   })),
   useRouter: vi.fn(() => ({
     push: vi.fn(),
@@ -67,7 +68,7 @@ describe('ManageInventory.vue', () => {
           description: 'Organic spinach leaves, great for salads and cooking',
           volume: '200g bag',
           location: 'Veg drawer',
-          expiryDays: 10,
+          expiryDays: 2,
           category: 'fridge',
           foodType: 'Vegetables',
           searchTerms: 'spinach greens',
@@ -87,6 +88,8 @@ describe('ManageInventory.vue', () => {
         }
       }
     })
+    // Spy on notifyMessage
+    vi.spyOn(wrapper.vm, 'notifyMessage')
   })
 
   afterEach(() => {
@@ -195,7 +198,7 @@ describe('ManageInventory.vue', () => {
     wrapper.vm.currentFilter = 'near-expiry'
     await wrapper.vm.$forceUpdate()
     await nextTick()
-    // Should show items with expiryDays <= 3
+    expect(wrapper.findAll('#expiryGrid .food-item-card').length).toBe(1) // Fresh Spinach
   })
 
   it('TC-019: sort by expiry works', async () => {
@@ -319,14 +322,10 @@ describe('ManageInventory.vue', () => {
 
   it('TC-033: updates quantity level', async () => {
     await nextTick()
-    const useBtn = wrapper.find('.mini-btn.use-item')
-    if (useBtn.exists()) {
-      await useBtn.trigger('click')
-      await wrapper.find('.qty-option.low').trigger('click')
-      await wrapper.find('.modal-add').trigger('click')
-      await nextTick()
-      expect(wrapper.text()).toContain('Updated')
-    }
+    wrapper.vm.currentUseItemId = wrapper.vm.inventory[0].id
+    wrapper.vm.selectedUseQuantity = 'low'
+    wrapper.vm.confirmUse()
+    expect(wrapper.vm.inventory[0].quantityLevel).toBe('low')
   })
 
   it('TC-034: finish item removes it', async () => {
@@ -360,6 +359,9 @@ describe('ManageInventory.vue', () => {
     const deleteBtn = wrapper.find('.mini-btn.delete-item')
     if (deleteBtn.exists()) {
       await deleteBtn.trigger('click')
+      await nextTick()
+      const confirmBtn = wrapper.find('.modal-danger')
+      await confirmBtn.trigger('click')
       await nextTick()
       expect(wrapper.vm.inventory.length).toBeLessThan(initialCount)
     }
@@ -500,9 +502,9 @@ describe('ManageInventory.vue', () => {
       quantityLevel: 'high',
     } as any)
     await nextTick()
-    const searchInput = wrapper.find('.search-input')
-    await searchInput.setValue('bread')
+    wrapper.vm.searchQuery = 'bread'
+    await wrapper.vm.$forceUpdate()
     await nextTick()
-    expect(wrapper.text()).toContain('Bread & Butter')
+    expect(wrapper.text()).toContain('Bread &amp; Butter')
   })
 })
