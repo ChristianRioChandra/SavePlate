@@ -333,12 +333,19 @@ describe('ManageInventory.vue', () => {
     await nextTick()
     const useBtn = wrapper.find('.mini-btn.use-item')
     if (useBtn.exists()) {
+      const initialCount = wrapper.vm.inventory.length
       await useBtn.trigger('click')
       const finishBtn = wrapper.find('button[style*="background: #fee2e2"]')
       if (finishBtn.exists()) {
         await finishBtn.trigger('click')
         await nextTick()
-        // Item should be removed
+        const confirmBtn = wrapper
+          .findAll('.modal-add')
+          .find((button) => button.text().includes('Finish Item'))
+        expect(confirmBtn).toBeTruthy()
+        await confirmBtn!.trigger('click')
+        await nextTick()
+        expect(wrapper.vm.inventory.length).toBeLessThan(initialCount)
       }
     }
   })
@@ -360,6 +367,12 @@ describe('ManageInventory.vue', () => {
     const deleteBtn = wrapper.find('.mini-btn.delete-item')
     if (deleteBtn.exists()) {
       await deleteBtn.trigger('click')
+      await nextTick()
+      const confirmBtn = wrapper
+        .findAll('.modal-add')
+        .find((button) => button.text().includes('Delete Item'))
+      expect(confirmBtn).toBeTruthy()
+      await confirmBtn!.trigger('click')
       await nextTick()
       expect(wrapper.vm.inventory.length).toBeLessThan(initialCount)
     }
