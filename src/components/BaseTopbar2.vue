@@ -6,7 +6,15 @@
     <div class="top-bar-actions">
       <div class="action-icons">
         <slot name="actions">
-          <i class="bi bi-bell" title="Notifications"></i>
+          <!-- Bell with unread badge — matches BaseTopbar -->
+          <div
+            class="bell-wrap clickable"
+            title="Notifications"
+            @click="$emit('open-notifications')"
+          >
+            <i class="bi bi-bell"></i>
+            <span v-if="unreadCount && unreadCount > 0" class="notif-badge">{{ unreadCount }}</span>
+          </div>
           <i class="bi bi-gear clickable" @click="navigateToSettings" title="Settings"></i>
           <i class="bi bi-box-arrow-right clickable" @click="navigateToHome" title="Logout"></i>
         </slot>
@@ -22,21 +30,15 @@ const router = useRouter()
 
 defineProps<{
   title: string
-  searchPlaceholder?: string
-  searchValue?: string
+  unreadCount?: number
 }>()
 
 defineEmits<{
-  (e: 'update:searchValue', value: string): void
+  (e: 'open-notifications'): void
 }>()
 
-const navigateToSettings = () => {
-  router.push('/settings')
-}
-
-const navigateToHome = () => {
-  router.push('/')
-}
+const navigateToSettings = () => router.push('/settings')
+const navigateToHome = () => router.push('/')
 </script>
 
 <style scoped>
@@ -67,44 +69,49 @@ const navigateToHome = () => {
   justify-content: flex-end;
 }
 
-.search-wrapper {
-  display: flex;
-  align-items: center;
-  background: #f1f5f9;
-  border-radius: 60px;
-  padding: 0 18px;
-  gap: 10px;
-  min-width: min(100%, 360px);
-  min-height: 50px;
-}
-
-.search-wrapper i {
-  color: #6f89ad;
-  font-size: 1.25rem;
-}
-
-.search-wrapper input {
-  border: none;
-  background: transparent;
-  font-size: 0.95rem;
-  outline: none;
-  width: 100%;
-  font-family: 'Inter', sans-serif;
-}
-
 .action-icons {
   display: flex;
   gap: 22px;
   font-size: 1.35rem;
   color: #5f7f9e;
+  align-items: center;
 }
 
-.action-icons i.clickable {
+.action-icons i.clickable,
+.bell-wrap.clickable {
   cursor: pointer;
   transition: color 0.2s ease;
 }
 
-.action-icons i.clickable:hover {
+.action-icons i.clickable:hover,
+.bell-wrap.clickable:hover {
   color: #2c7a4d;
+}
+
+/* Badge wrapper — needed so the badge can sit relative to the bell */
+.bell-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  color: #5f7f9e;
+  font-size: 1.35rem;
+}
+
+.notif-badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  background: #e53e3e;
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  line-height: 1;
 }
 </style>
