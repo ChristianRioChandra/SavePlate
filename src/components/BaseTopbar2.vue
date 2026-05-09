@@ -42,7 +42,10 @@ const navigateToHome = () => router.push('/')
 </script>
 
 <style scoped>
-.top-bar {
+ .top-bar {
+  position: sticky;
+  top: 24px;
+  z-index: 50;
   background: white;
   border-radius: 36px;
   padding: 18px 30px;
