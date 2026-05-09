@@ -1,3 +1,4 @@
+
 // services/foodService.ts
 import {
   collection,
@@ -50,7 +51,7 @@ export interface AddFoodItemPayload {
   quantity: number
   unit: string
   expiryDate: string        // ISO date string e.g. '2026-04-20'
-  categoryId?: string | null
+  foodType: string
   type: FoodTypeValue
   storageLocation?: string | null
   notes?: string | null
@@ -75,7 +76,7 @@ export async function addFoodItem(
 ): Promise<string> {
   const docRef = await addDoc(collection(db, FOOD_COL), {
     user_id: uid,
-    category_id: payload.categoryId ?? null,
+    food_type: payload.foodType,
     name: payload.name,
     quantity: payload.quantity,
     unit: payload.unit,

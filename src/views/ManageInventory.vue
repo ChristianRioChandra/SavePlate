@@ -1,3 +1,8 @@
+manage inventory
+
+
+
+
 <template>
   <div class="manage-inventory-page">
     <!-- ── Notification Popup Overlay ─────────────────────────────────────── -->
@@ -1316,7 +1321,7 @@ function subscribeInventory(uid: string) {
     (snap) => {
       const raw = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }))
       inventory.value = raw
-        .filter((r) => r['status'] === 'available')
+        .filter((r) => (r as Record<string, unknown>)['status'] === 'available')
         .map((r) => mapFoodToInventoryItem(r as FoodItem))
     },
     (error) => {
@@ -1434,10 +1439,11 @@ function mapFoodToInventoryItem(item: FoodItem): InventoryItem {
   const unit = item.unit ? String(item.unit).trim() : 'item'
   const volume = `${quantity}${unit ? ` ${unit}` : ''}`.trim()
   const category = item.type || 'fridge'
-  const notes = (item as Record<string, unknown>)['notes']
-  const storageLocation = (item as Record<string, unknown>)['storage_location']
-  const expiryDate = (item as Record<string, unknown>)['expiry_date']
-  const categoryId = (item as Record<string, unknown>)['category_id']
+  const rawItem = item as unknown as Record<string, unknown>
+  const notes = rawItem['notes']
+  const storageLocation = rawItem['storage_location']
+  const expiryDate = rawItem['expiry_date']
+  const foodType = rawItem['food_type']
   const locationByCategory: Record<string, string> = {
     fridge: 'Fridge',
     pantry: 'Pantry',
@@ -1453,7 +1459,7 @@ function mapFoodToInventoryItem(item: FoodItem): InventoryItem {
     location: typeof storageLocation === 'string' ? storageLocation : (locationByCategory[category] || 'Storage'),
     expiryDays: calculateDaysUntil(typeof expiryDate === 'string' ? expiryDate : new Date().toISOString().slice(0, 10)),
     category,
-    foodType: typeof categoryId === 'string' ? categoryId : 'Other',
+    foodType: typeof foodType === 'string' ? foodType : 'Other',
     searchTerms: String(item.name || '').toLowerCase(),
     quantityLevel: mapQuantityLevelFromDb(item.quantity_level),
   }
@@ -1945,7 +1951,7 @@ async function confirmAdd() {
       quantity,
       unit,
       expiryDate: newItem.value.expiryDate,
-      categoryId: newItem.value.foodType || null,
+      foodType: newItem.value.foodType,
       type: selectedStorage.value as 'fridge' | 'pantry' | 'freezer' | 'countertop',
       storageLocation: newItemData.location,
       notes: newItem.value.description || null,

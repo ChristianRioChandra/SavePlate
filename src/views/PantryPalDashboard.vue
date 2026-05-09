@@ -71,10 +71,9 @@
             </div>
             <div class="inventory-list">
               <div v-for="item in inventoryItems" :key="item.id" class="inventory-item">
-                <div class="inv-icon">{{ item.icon }}</div>
                 <div class="inv-info">
                   <div class="inv-name">{{ item.name }}</div>
-                  <div class="inv-sub">{{ item.location }} · Exp: {{ item.expiry }}</div>
+                  <div class="inv-sub">{{ item.location }} · {{ item.type }}</div>
                 </div>
                 <span class="inv-tag" :class="{ warn: item.warning }">{{ item.tag }}</span>
               </div>
@@ -155,9 +154,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { db } from '@/firebase'
+import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore'
 import BaseSidebar from '@/components/BaseSidebar.vue'
 import BaseTopbar from '@/components/BaseTopbar.vue'
 import BaseRightSidebar from '@/components/BaseRightSidebar.vue'
@@ -216,13 +217,22 @@ function viewAllNotifications() {
 }
 
 interface InventoryItem {
-  id: number
-  icon: string
+  id: string
   name: string
   location: string
-  expiry: string
+  type: string
   tag: string
   warning?: boolean
+}
+
+const calculateDaysUntil = (expiryDateStr: string): number => {
+  if (!expiryDateStr) return 0
+  const expiry = new Date(expiryDateStr)
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  expiry.setHours(0, 0, 0, 0)
+  const diffTime = expiry.getTime() - now.getTime()
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 }
 
 const searchQuery = ref('')
@@ -236,33 +246,39 @@ const navItems: NavItem[] = [
   { label: 'Settings', route: '/settings', icon: 'bi bi-gear' },
 ]
 
-const inventoryItems = ref<InventoryItem[]>([
-  {
-    id: 1,
-    icon: '🥛',
-    name: 'UltraMilk · 500ml Original',
-    location: 'Fridge',
-    expiry: '6 Apr 2026',
-    tag: '2d left',
-    warning: true,
-  },
-  {
-    id: 2,
-    icon: '🍳',
-    name: 'Shrimp Fried Rice',
-    location: 'Freezer',
-    expiry: '20 Apr 2026',
-    tag: 'Fresh',
-  },
-  {
-    id: 3,
-    icon: '🍗',
-    name: 'Chicken Nuggets',
-    location: 'Freezer',
-    expiry: '25 Apr 2026',
-    tag: 'Fresh',
-  },
-])
+const inventoryItems = ref<InventoryItem[]>([])
+let unsubscribeInventory: (() => void) | null = null
+
+onMounted(() => {
+  if (authStore.user?.uid) {
+    const q = query(
+      collection(db, 'food'), // Corrected collection name to 'food'
+      where('user_id', '==', authStore.user.uid), // Corrected field name to 'user_id'
+      orderBy('created_at', 'desc'), // Corrected field name to 'created_at'
+      limit(3)
+    )
+
+    unsubscribeInventory = onSnapshot(q, (snapshot) => {
+      inventoryItems.value = snapshot.docs.map(doc => {
+        const data = doc.data()
+        const daysLeft = calculateDaysUntil(data.expiry_date)
+
+        return {
+          id: doc.id,
+          name: data.name,
+          location: data.storage_location || 'Pantry',
+          type: data.food_type || 'Other',
+          tag: daysLeft < 0 ? 'Expired' : daysLeft === 0 ? 'Today' : `${daysLeft}d left`,
+          warning: daysLeft <= 3
+        }
+      })
+    })
+  }
+})
+
+onUnmounted(() => {
+  if (unsubscribeInventory) unsubscribeInventory()
+})
 
 function handleAddFood() {
   router.push('/inventory?action=add')
