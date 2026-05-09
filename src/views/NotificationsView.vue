@@ -5,9 +5,14 @@
 
       <div class="main-content">
         <!-- Top Bar -->
-        <div class="top-bar">
-          <h2 class="page-title">Notifications</h2>
-          <div class="top-bar-actions">
+        <BaseTopbar
+          title="Notifications"
+          search-placeholder="Search notifications..."
+          v-model:search-value="searchQuery"
+          :unread-count="unreadCount"
+          @open-notifications="() => { showNotifPopup = true }"
+        >
+          <template #actions>
             <label class="select-all-wrap">
               <span>Select All</span>
               <input type="checkbox" v-model="selectAll" @change="toggleSelectAll" />
@@ -20,8 +25,9 @@
               <i class="bi bi-check2-all"></i>
               <span>Read</span>
             </button>
-          </div>
-        </div>
+          </template>
+        </BaseTopbar>
+
 
         <!-- Notification List -->
         <div class="notif-list">
@@ -75,11 +81,10 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import BaseSidebar from '@/components/BaseSidebar.vue'
+import BaseTopbar from '@/components/BaseTopbar.vue'
 import type { NavItem } from '@/components/BaseSidebar.vue'
 
-const router = useRouter()
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', route: '/dashboard', icon: 'bi bi-graph-up' },
@@ -103,8 +108,14 @@ interface NotifItem {
 }
 
 // ─── State ────────────────────────────────────────────────────────────────────
+const searchQuery = ref('')
+const unreadCount = computed(() => notifications.value.filter((n) => !n.read).length)
+
+const showNotifPopup = ref(false)
+
 const notifications = ref<NotifItem[]>([
   {
+
     id: 1,
     icon: '🥛',
     title: 'Ultra Milk : 500Ml Original, About to Expire Soon',
@@ -215,7 +226,7 @@ function deleteSelected() {
   min-width: 0;
 }
 
-/* ── Top Bar ──────────────────────────────────────────────────────────────── */
+/* ── Top Bar (legacy styles; replaced by BaseTopbar component) ── */
 .top-bar {
   background: white;
   border-radius: 36px;
