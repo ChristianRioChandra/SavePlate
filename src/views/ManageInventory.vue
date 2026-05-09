@@ -1169,7 +1169,19 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import BaseSidebar from '@/components/BaseSidebar.vue'
 import BaseTopbar from '@/components/BaseTopbar.vue'
+import { auth, db } from '@/firebase'
+import {
+  addFoodItem,
+  deleteFoodItem,
+  markFoodAsDonated,
+  markFoodAsUsed,
+  updateFoodItem,
+  type FoodItem,
+} from '@/services/foodService'
 import { addLocalAnalyticsEvent, addLocalAnalyticsEvents } from '@/services/localAnalyticsStore'
+import { getInventoryUiPrefs, updateInventoryUiPrefs, type InventoryUiPrefs } from '@/services/authService'
+import { onAuthStateChanged } from 'firebase/auth'
+import { collection, doc, getDoc, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 
 const route = useRoute()
 const router = useRouter()
@@ -1198,35 +1210,8 @@ interface InventoryItem {
   quantityLevel: string
 }
 
-const inventory = ref<InventoryItem[]>([
-  {
-    id: 'f1',
-    name: 'Susu UltraMilk',
-    description: 'Fresh milk, rich in calcium and vitamin D',
-    volume: '500ml',
-    location: 'Middle shelf',
-    expiryDays: 5,
-    category: 'fridge',
-    foodType: 'Dairy & Eggs',
-    searchTerms: 'milk dairy',
-    quantityLevel: 'high',
-  },
-  {
-    id: 'f2',
-    name: 'Fresh Spinach',
-    description: 'Organic spinach leaves, great for salads and cooking',
-    volume: '200g bag',
-    location: 'Veg drawer',
-    expiryDays: 2,
-    category: 'fridge',
-    foodType: 'Vegetables',
-    searchTerms: 'spinach greens',
-    quantityLevel: 'low',
-  },
-  // ... include all other items from original data ...
-])
-
-const nextId = ref(100)
+const inventory = ref<InventoryItem[]>([])
+const currentUid = ref<string | null>(auth.currentUser?.uid ?? null)
 
 const currentFilter = ref('all')
 const currentSort = ref('name')
@@ -1290,116 +1275,57 @@ const expandedCategories = ref({
   expiry: false,
 })
 
-// Local Storage Keys
-const STORAGE_KEYS = {
-  INVENTORY: 'pantryPal_inventory',
-  NEXT_ID: 'pantryPal_nextId',
-  SELECTED_DONATIONS: 'pantryPal_selectedDonations',
-  EXPANDED_CATEGORIES: 'pantryPal_expandedCategories',
-  INVENTORY_LAYOUT: 'pantryPal_inventoryLayout',
-  CURRENT_FILTER: 'pantryPal_currentFilter',
-  CURRENT_SORT: 'pantryPal_currentSort',
-}
+const uiPrefsLoaded = ref(false)
+let uiPrefsSaveTimer: number | undefined
 
-// Local Storage Functions - Automatically saves/loads inventory data
-// Similar to: localStorage.setItem('name', 'Alex'), localStorage.getItem('name'), etc.
-
-// Local Storage Functions
-function saveToLocalStorage<T>(key: string, value: T) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-    console.log(`Saved to localStorage: ${key}`, value)
-  } catch (error) {
-    console.error('Error saving to localStorage:', error)
+function buildUiPrefsPayload(): InventoryUiPrefs {
+  return {
+    layout: inventoryLayout.value,
+    filter: currentFilter.value,
+    sort: currentSort.value,
+    expanded_categories: { ...expandedCategories.value },
   }
 }
 
-function loadFromLocalStorage<T>(key: string, defaultValue: T): T {
-  try {
-    const item = localStorage.getItem(key)
-    if (item) {
-      const parsed = JSON.parse(item)
-      console.log(`Loaded from localStorage: ${key}`, parsed)
-      return parsed
-    }
-    console.log(`No data in localStorage for: ${key}, using default`, defaultValue)
-    return defaultValue
-  } catch (error) {
-    console.error('Error loading from localStorage:', error)
-    return defaultValue
-  }
+function scheduleSaveUiPrefs() {
+  const uid = currentUid.value
+  if (!uid) return
+  if (!uiPrefsLoaded.value) return
+
+  if (uiPrefsSaveTimer) window.clearTimeout(uiPrefsSaveTimer)
+  uiPrefsSaveTimer = window.setTimeout(() => {
+    updateInventoryUiPrefs(uid, buildUiPrefsPayload()).catch((error) => {
+      console.error('Failed to save inventory UI prefs:', error)
+    })
+  }, 600)
 }
 
-/* removed unused localStorage helpers to satisfy ESLint */
+let unsubscribeInventory: (() => void) | null = null
 
+function subscribeInventory(uid: string) {
+  if (unsubscribeInventory) unsubscribeInventory()
 
-// Load data from localStorage on mount
-onMounted(() => {
-  // Load inventory
-  const savedInventory = loadFromLocalStorage(STORAGE_KEYS.INVENTORY, [])
-  if (savedInventory.length > 0) {
-    inventory.value = savedInventory
-  }
+  const q = query(
+    collection(db, 'food'),
+    where('user_id', '==', uid),
+    orderBy('expiry_date', 'asc'),
+  )
 
-  // Load nextId
-  const savedNextId = loadFromLocalStorage(STORAGE_KEYS.NEXT_ID, 100)
-  nextId.value = savedNextId
-
-  // Load selected donations
-  const savedDonations = loadFromLocalStorage(STORAGE_KEYS.SELECTED_DONATIONS, [])
-  selectedDonationIds.value = new Set(savedDonations)
-
-  // Load expanded categories
-  const savedExpanded = loadFromLocalStorage(STORAGE_KEYS.EXPANDED_CATEGORIES, {
-    all: false,
-    fridge: true,
-    pantry: false,
-    freezer: false,
-    countertop: false,
-    expiry: false,
-  })
-  expandedCategories.value = savedExpanded
-
-  // Load layout
-  const savedLayout = loadFromLocalStorage(STORAGE_KEYS.INVENTORY_LAYOUT, 'cards')
-  inventoryLayout.value = savedLayout
-
-  // Load filter and sort
-  const savedFilter = loadFromLocalStorage(STORAGE_KEYS.CURRENT_FILTER, 'all')
-  currentFilter.value = savedFilter
-
-  const savedSort = loadFromLocalStorage(STORAGE_KEYS.CURRENT_SORT, 'name')
-  currentSort.value = savedSort
-})
-
-// Watchers to save data to localStorage
-watch(inventory, (newInventory) => {
-  saveToLocalStorage(STORAGE_KEYS.INVENTORY, newInventory)
-}, { deep: true })
-
-watch(nextId, (newNextId) => {
-  saveToLocalStorage(STORAGE_KEYS.NEXT_ID, newNextId)
-})
-
-watch(selectedDonationIds, (newSelected) => {
-  saveToLocalStorage(STORAGE_KEYS.SELECTED_DONATIONS, Array.from(newSelected))
-}, { deep: true })
-
-watch(expandedCategories, (newExpanded) => {
-  saveToLocalStorage(STORAGE_KEYS.EXPANDED_CATEGORIES, newExpanded)
-}, { deep: true })
-
-watch(inventoryLayout, (newLayout) => {
-  saveToLocalStorage(STORAGE_KEYS.INVENTORY_LAYOUT, newLayout)
-})
-
-watch(currentFilter, (newFilter) => {
-  saveToLocalStorage(STORAGE_KEYS.CURRENT_FILTER, newFilter)
-})
-
-watch(currentSort, (newSort) => {
-  saveToLocalStorage(STORAGE_KEYS.CURRENT_SORT, newSort)
-})
+  unsubscribeInventory = onSnapshot(
+    q,
+    (snap) => {
+      const raw = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }))
+      inventory.value = raw
+        .filter((r) => r['status'] === 'available')
+        .map((r) => mapFoodToInventoryItem(r as FoodItem))
+    },
+    (error) => {
+      console.error('Inventory snapshot failed:', error)
+      const msg = (error as { code?: string; message?: string })?.message || 'Failed to load inventory.'
+      notifyMessage(msg)
+    },
+  )
+}
 
 const addModalOpen = ref(false)
 const useModalOpen = ref(false)
@@ -1484,6 +1410,53 @@ function getVolumeQuantity(volume: string): number {
 function getVolumeUnit(volume: string): string {
   const match = volume.match(/[\d.]+\s*([a-zA-Z]+)/)
   return match?.[1] || 'item'
+}
+
+function parseVolumeInput(volume: string): { quantity: number; unit: string } {
+  const quantity = getVolumeQuantity(volume)
+  const unit = getVolumeUnit(volume)
+  return { quantity, unit }
+}
+
+function mapQuantityLevelFromDb(level?: string): QuantityLevel {
+  if (level === 'low' || level === 'high' || level === 'full') return level
+  if (level === 'medium') return 'half'
+  return 'full'
+}
+
+function mapQuantityLevelToDb(level: QuantityLevel): 'low' | 'medium' | 'high' | 'full' {
+  if (level === 'half') return 'medium'
+  return level
+}
+
+function mapFoodToInventoryItem(item: FoodItem): InventoryItem {
+  const quantity = typeof item.quantity === 'number' ? item.quantity : 1
+  const unit = item.unit ? String(item.unit).trim() : 'item'
+  const volume = `${quantity}${unit ? ` ${unit}` : ''}`.trim()
+  const category = item.type || 'fridge'
+  const notes = (item as Record<string, unknown>)['notes']
+  const storageLocation = (item as Record<string, unknown>)['storage_location']
+  const expiryDate = (item as Record<string, unknown>)['expiry_date']
+  const categoryId = (item as Record<string, unknown>)['category_id']
+  const locationByCategory: Record<string, string> = {
+    fridge: 'Fridge',
+    pantry: 'Pantry',
+    freezer: 'Freezer',
+    countertop: 'Countertop',
+  }
+
+  return {
+    id: item.id,
+    name: item.name || 'Unnamed Item',
+    description: typeof notes === 'string' ? notes : '',
+    volume,
+    location: typeof storageLocation === 'string' ? storageLocation : (locationByCategory[category] || 'Storage'),
+    expiryDays: calculateDaysUntil(typeof expiryDate === 'string' ? expiryDate : new Date().toISOString().slice(0, 10)),
+    category,
+    foodType: typeof categoryId === 'string' ? categoryId : 'Other',
+    searchTerms: String(item.name || '').toLowerCase(),
+    quantityLevel: mapQuantityLevelFromDb(item.quantity_level),
+  }
 }
 
 function recordInventoryAnalytics(item: InventoryItem, kind: 'used' | 'donated') {
@@ -1649,10 +1622,16 @@ function requestDeleteItem(id: string) {
   openConfirmationModal('delete', id)
 }
 
-function deleteItem(id: string) {
-  inventory.value = inventory.value.filter((i) => i.id !== id)
-  selectedDonationIds.value.delete(id)
-  notifyMessage('Item removed.')
+async function deleteItem(id: string) {
+  try {
+    await deleteFoodItem(id)
+    inventory.value = inventory.value.filter((i) => i.id !== id)
+    selectedDonationIds.value.delete(id)
+    notifyMessage('Item removed.')
+  } catch (error) {
+    console.error('Failed to delete item:', error)
+    notifyMessage('Failed to remove item.')
+  }
 }
 
 function openUseModal(id: string) {
@@ -1673,27 +1652,41 @@ function requestFinishItem() {
   openConfirmationModal('finish', currentUseItemId.value)
 }
 
-function finishItem() {
+async function finishItem() {
   if (!currentUseItemId.value) return
   const item = inventory.value.find((i) => i.id === currentUseItemId.value)
   if (!item) return
-  recordInventoryAnalytics(item, 'used')
-  inventory.value = inventory.value.filter((i) => i.id !== currentUseItemId.value)
-  selectedDonationIds.value.delete(currentUseItemId.value)
-  closeUseModal()
-  notifyMessage(`Finished "${item.name}"`)
+  try {
+    await markFoodAsUsed(item.id)
+    recordInventoryAnalytics(item, 'used')
+    inventory.value = inventory.value.filter((i) => i.id !== currentUseItemId.value)
+    selectedDonationIds.value.delete(currentUseItemId.value)
+    closeUseModal()
+    notifyMessage(`Finished "${item.name}"`)
+  } catch (error) {
+    console.error('Failed to mark item as used:', error)
+    notifyMessage('Failed to update item.')
+  }
 }
 
-function confirmUse() {
+async function confirmUse() {
   if (!currentUseItemId.value) return
   const item = inventory.value.find((i) => i.id === currentUseItemId.value)
   if (!item) return
-  item.quantityLevel = selectedUseQuantity.value
-  closeUseModal()
-  notifyMessage(`Updated "${item.name}" usage`)
+  try {
+    await updateFoodItem(currentUseItemId.value, {
+      quantity_level: mapQuantityLevelToDb(selectedUseQuantity.value as QuantityLevel),
+    })
+    item.quantityLevel = selectedUseQuantity.value
+    closeUseModal()
+    notifyMessage(`Updated "${item.name}" usage`)
+  } catch (error) {
+    console.error('Failed to update usage quantity:', error)
+    notifyMessage('Failed to update usage.')
+  }
 }
 
-function confirmPendingAction() {
+async function confirmPendingAction() {
   const itemId = confirmationItemId.value
   const action = confirmationAction.value
 
@@ -1705,21 +1698,28 @@ function confirmPendingAction() {
   closeConfirmationModal()
 
   if (action === 'delete') {
-    deleteItem(itemId)
+    await deleteItem(itemId)
     return
   }
 
   if (currentUseItemId.value === itemId) {
-    finishItem()
+    await finishItem()
   }
 }
 
-function singleDonate(id: string) {
+async function singleDonate(id: string) {
   const item = inventory.value.find((i) => i.id === id)
-  if (item) recordInventoryAnalytics(item, 'donated')
-  inventory.value = inventory.value.filter((i) => i.id !== id)
-  selectedDonationIds.value.delete(id)
-  notifyMessage('Donated item. Thank you for sharing!')
+  if (!item) return
+  try {
+    await markFoodAsDonated(id)
+    recordInventoryAnalytics(item, 'donated')
+    inventory.value = inventory.value.filter((i) => i.id !== id)
+    selectedDonationIds.value.delete(id)
+    notifyMessage('Donated item. Thank you for sharing!')
+  } catch (error) {
+    console.error('Failed to donate item:', error)
+    notifyMessage('Failed to donate item.')
+  }
 }
 
 function toggleDonationSelection(id: string) {
@@ -1738,7 +1738,7 @@ function clearAllSelections() {
   selectedDonationIds.value.clear()
 }
 
-function bulkDonateAction() {
+async function bulkDonateAction() {
   if (selectedDonationIds.value.size === 0) return
   const ids = Array.from(selectedDonationIds.value)
   const selectedItems = ids
@@ -1755,9 +1755,15 @@ function bulkDonateAction() {
       unit: getVolumeUnit(item.volume),
     })),
   )
-  inventory.value = inventory.value.filter((i) => !selectedDonationIds.value.has(i.id))
-  selectedDonationIds.value.clear()
-  notifyMessage(`Donated ${ids.length} item(s): ${names.join(', ')}. Thank you for reducing waste!`)
+  try {
+    await Promise.all(ids.map((id) => markFoodAsDonated(id)))
+    inventory.value = inventory.value.filter((i) => !selectedDonationIds.value.has(i.id))
+    selectedDonationIds.value.clear()
+    notifyMessage(`Donated ${ids.length} item(s): ${names.join(', ')}. Thank you for reducing waste!`)
+  } catch (error) {
+    console.error('Failed to bulk donate items:', error)
+    notifyMessage('Failed to donate selected items.')
+  }
 }
 
 function getFilterLabel(filter: string): string {
@@ -1848,12 +1854,52 @@ watch(
 
 // Check for query parameter on mount
 onMounted(() => {
+  onAuthStateChanged(auth, (user) => {
+    currentUid.value = user?.uid ?? null
+
+    if (!user) {
+      inventory.value = []
+      uiPrefsLoaded.value = true
+      return
+    }
+
+    const uid = user.uid
+
+    // Subscribe immediately so inventory loads even if prefs fetch is slow/fails.
+    subscribeInventory(uid)
+
+    getInventoryUiPrefs(uid)
+      .then((prefs) => {
+        if (!prefs) return
+        inventoryLayout.value = prefs.layout ?? inventoryLayout.value
+        currentFilter.value = prefs.filter ?? currentFilter.value
+        currentSort.value = prefs.sort ?? currentSort.value
+        if (prefs.expanded_categories && typeof prefs.expanded_categories === 'object') {
+          expandedCategories.value = {
+            ...expandedCategories.value,
+            ...prefs.expanded_categories,
+          }
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to load inventory UI prefs:', error)
+      })
+      .finally(() => {
+        uiPrefsLoaded.value = true
+      })
+  })
+
   if (route.query.action === 'add') {
     openAddModal()
   }
 })
 
-function confirmAdd() {
+watch(inventoryLayout, scheduleSaveUiPrefs)
+watch(currentFilter, scheduleSaveUiPrefs)
+watch(currentSort, scheduleSaveUiPrefs)
+watch(expandedCategories, scheduleSaveUiPrefs, { deep: true })
+
+async function confirmAdd() {
   if (!newItem.value.name) {
     notifyMessage('Please enter a name')
     return
@@ -1868,12 +1914,11 @@ function confirmAdd() {
   }
 
   const expiryDays = calculateDaysUntil(newItem.value.expiryDate)
-  const newId = `item_${nextId.value++}`
+  const { quantity, unit } = parseVolumeInput(newItem.value.volume)
   const newItemData = {
-    id: newId,
     name: newItem.value.name,
     description: newItem.value.description,
-    volume: newItem.value.volume,
+    volume: `${quantity} ${unit}`,
     location:
       selectedStorage.value === 'fridge'
         ? 'Fridge'
@@ -1888,7 +1933,36 @@ function confirmAdd() {
     searchTerms: newItem.value.name.toLowerCase(),
     quantityLevel: selectedQuantityLevel.value,
   }
-  inventory.value = [...inventory.value, newItemData]
+  try {
+    const uid = currentUid.value
+    if (!uid) {
+      notifyMessage('Please login first')
+      return
+    }
+
+    const newId = await addFoodItem(uid, {
+      name: newItem.value.name.trim(),
+      quantity,
+      unit,
+      expiryDate: newItem.value.expiryDate,
+      categoryId: newItem.value.foodType || null,
+      type: selectedStorage.value as 'fridge' | 'pantry' | 'freezer' | 'countertop',
+      storageLocation: newItemData.location,
+      notes: newItem.value.description || null,
+    })
+
+    // Verify we can read back what we wrote (helps catch security rules / project mismatch fast).
+    const snap = await getDoc(doc(db, 'food', newId))
+    if (!snap.exists()) {
+      notifyMessage('Item was created but could not be read back. Check Firestore rules.')
+      return
+    }
+  } catch (error) {
+    console.error('Failed to add inventory item:', error)
+    const msg = (error as { code?: string; message?: string })?.message || 'Failed to add item.'
+    notifyMessage(msg)
+    return
+  }
 
   // Ensure the new item is visible after add
   const visibleUnderCurrentFilter =

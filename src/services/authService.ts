@@ -36,12 +36,20 @@ export interface UserProfile {
   is_verified: boolean
   two_factor_enabled: boolean
   privacy_settings: PrivacySettings
+  inventory_ui_prefs?: InventoryUiPrefs
   created_at: unknown // Firestore Timestamp
 }
 
 export interface UpdateProfilePayload {
   name: string
   householdSize: number | null
+}
+
+export interface InventoryUiPrefs {
+  layout: 'cards' | 'compact'
+  filter: string
+  sort: string
+  expanded_categories: Record<string, boolean>
 }
 
 // ─── Register ────────────────────────────────────────────────────────────────
@@ -113,6 +121,19 @@ export async function updateUserProfile(
   { name, householdSize }: UpdateProfilePayload,
 ): Promise<void> {
   await updateDoc(doc(db, 'users', uid), { name, householdSize })
+}
+
+// ─── Inventory UI Preferences ────────────────────────────────────────────────
+
+export async function getInventoryUiPrefs(uid: string): Promise<InventoryUiPrefs | null> {
+  const snap = await getDoc(doc(db, 'users', uid))
+  if (!snap.exists()) return null
+  const data = snap.data() as Record<string, unknown>
+  return (data['inventory_ui_prefs'] as InventoryUiPrefs) ?? null
+}
+
+export async function updateInventoryUiPrefs(uid: string, prefs: InventoryUiPrefs): Promise<void> {
+  await updateDoc(doc(db, 'users', uid), { inventory_ui_prefs: prefs })
 }
 
 // ─── Change Password ─────────────────────────────────────────────────────────
