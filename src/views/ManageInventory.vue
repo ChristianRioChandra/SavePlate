@@ -1,5 +1,46 @@
 <template>
   <div class="manage-inventory-page">
+    <!-- ── Notification Popup Overlay ─────────────────────────────────────── -->
+    <Transition name="fade">
+      <div
+        v-if="showNotifPopup"
+        class="notif-overlay"
+        @click.self="showNotifPopup = false"
+      >
+        <div class="notif-popup">
+          <div class="notif-popup-header">
+            <span class="notif-popup-title">Recent</span>
+            <button class="mark-read-btn" @click="markAllAsRead">Mark All As Read</button>
+          </div>
+
+          <div class="notif-popup-list">
+            <div
+              v-for="notif in notifications"
+              :key="notif.id"
+              class="notif-popup-item"
+              :class="{ unread: !notif.read }"
+            >
+              <div class="notif-item-icon">{{ notif.icon }}</div>
+              <div class="notif-item-body">
+                <div class="notif-item-title">{{ notif.title }}</div>
+                <div class="notif-item-detail">{{ notif.detail }}</div>
+                <div class="notif-item-date">
+                  {{ notif.date }}, {{ notif.time }}
+                </div>
+              </div>
+              <div v-if="!notif.read" class="notif-unread-dot"></div>
+            </div>
+
+            <div v-if="notifications.length === 0" class="notif-empty">No new notifications</div>
+          </div>
+
+          <button class="notif-view-all-btn" @click="viewAllNotifications">
+            View All Notification
+          </button>
+        </div>
+      </div>
+    </Transition>
+
     <!-- USE MODAL -->
     <div v-if="useModalOpen" class="modal-overlay" style="display: flex">
       <div class="modal-box">
@@ -347,16 +388,17 @@
           </div>
         </section>
 
-        <BaseTopbar
-          class="desktop-topbar"
-          title="Manage Inventory"
-          search-placeholder="Search any food (milk, rice, ice cream...)"
-          v-model:search-value="searchQuery"
-        >
-          <template #actions>
-            <i class="bi bi-sliders"></i>
-          </template>
-        </BaseTopbar>
+        <div class="topbar-sticky-wrap">
+          <BaseTopbar
+            title="Manage Inventory"
+            search-placeholder="Search food, donations, meals..."
+            v-model:search-value="searchQuery"
+            :unread-count="unreadCount"
+            @open-notifications="showNotifPopup = true"
+          />
+        </div>
+
+
 
         <div class="layout-toggle-bar" aria-label="Inventory layout selector">
           <div class="layout-toggle" role="group" aria-label="Choose inventory layout">
@@ -534,17 +576,15 @@
                           <i class="bi bi-exclamation-triangle"></i> expires in
                           {{ item.expiryDays }}d
                         </span>
-
                         <span v-else class="expiry-badge">
                           <i class="bi bi-clock"></i> {{ item.expiryDays }}d left
                         </span>
-
+                      </div>
+                      <div class="row5">
                         <span class="tag storage-tag">{{ item.category }}</span>
                         <span class="tag type-tag">{{ item.foodType }}</span>
+                        <span class="volume-badge">{{ item.volume }}</span>
                       </div>
-                    </div>
-                    <div class="card-badges">
-                      <span class="volume-badge">{{ item.volume }}</span>
                     </div>
                   </div>
 
@@ -639,17 +679,15 @@
                           <i class="bi bi-exclamation-triangle"></i> expires in
                           {{ item.expiryDays }}d
                         </span>
-
                         <span v-else class="expiry-badge">
                           <i class="bi bi-clock"></i> {{ item.expiryDays }}d left
                         </span>
-
+                      </div>
+                      <div class="row5">
                         <span class="tag storage-tag">{{ item.category }}</span>
                         <span class="tag type-tag">{{ item.foodType }}</span>
+                        <span class="volume-badge">{{ item.volume }}</span>
                       </div>
-                    </div>
-                    <div class="card-badges">
-                      <span class="volume-badge">{{ item.volume }}</span>
                     </div>
                   </div>
 
@@ -744,17 +782,15 @@
                           <i class="bi bi-exclamation-triangle"></i> expires in
                           {{ item.expiryDays }}d
                         </span>
-
                         <span v-else class="expiry-badge">
                           <i class="bi bi-clock"></i> {{ item.expiryDays }}d left
                         </span>
-
+                      </div>
+                      <div class="row5">
                         <span class="tag storage-tag">{{ item.category }}</span>
                         <span class="tag type-tag">{{ item.foodType }}</span>
+                        <span class="volume-badge">{{ item.volume }}</span>
                       </div>
-                    </div>
-                    <div class="card-badges">
-                      <span class="volume-badge">{{ item.volume }}</span>
                     </div>
                   </div>
 
@@ -821,7 +857,7 @@
                 <div
                   v-for="item in getFilteredAndSortedItems('countertop')"
                   :key="item.id"
-                  class="food-item-card"
+                class="food-item-card"
                   :class="{
                     'selected-for-donation': selectedDonationIds.has(item.id),
                     'hidden-by-search': isHiddenBySearch(item),
@@ -849,17 +885,15 @@
                           <i class="bi bi-exclamation-triangle"></i> expires in
                           {{ item.expiryDays }}d
                         </span>
-
                         <span v-else class="expiry-badge">
                           <i class="bi bi-clock"></i> {{ item.expiryDays }}d left
                         </span>
-
+                      </div>
+                      <div class="row5">
                         <span class="tag storage-tag">{{ item.category }}</span>
                         <span class="tag type-tag">{{ item.foodType }}</span>
+                        <span class="volume-badge">{{ item.volume }}</span>
                       </div>
-                    </div>
-                    <div class="card-badges">
-                      <span class="volume-badge">{{ item.volume }}</span>
                     </div>
                   </div>
 
@@ -954,17 +988,15 @@
                           <i class="bi bi-exclamation-triangle"></i> expires in
                           {{ item.expiryDays }}d
                         </span>
-
                         <span v-else class="expiry-badge">
                           <i class="bi bi-clock"></i> {{ item.expiryDays }}d left
                         </span>
-
+                      </div>
+                      <div class="row5">
                         <span class="tag storage-tag">{{ item.category }}</span>
                         <span class="tag type-tag">{{ item.foodType }}</span>
+                        <span class="volume-badge">{{ item.volume }}</span>
                       </div>
-                    </div>
-                    <div class="card-badges">
-                      <span class="volume-badge">{{ item.volume }}</span>
                     </div>
                   </div>
 
@@ -1210,8 +1242,44 @@ const compactStorageColumns = [
 ] as const
 
 const searchQuery = ref('')
+const showNotifPopup = ref(false)
+
+interface NotifItem {
+  id: number
+  icon: string
+  title: string
+  detail: string
+  date: string
+  time: string
+  read: boolean
+}
+
+const notifications = ref<NotifItem[]>([
+  {
+    id: 1,
+    icon: '🥛',
+    title: 'Milk about to Expire',
+    detail: 'Milk is about to Expire',
+    date: '31 March 2026',
+    time: '09:30 AM',
+    read: false,
+  },
+  {
+    id: 2,
+    icon: '🍞',
+    title: 'Bread about to Expire',
+    detail: 'Bread is expiring in 1 day. Use or donate it.',
+    date: '31 March 2026',
+    time: '08:00 AM',
+    read: true,
+  },
+])
+
+const unreadCount = computed(() => notifications.value.filter((n) => !n.read).length)
+
 const selectedDonationIds = ref<Set<string>>(new Set())
 const mobileFilterModalOpen = ref(false)
+
 
 const expandedCategories = ref({
   all: false,
@@ -1262,38 +1330,8 @@ function loadFromLocalStorage<T>(key: string, defaultValue: T): T {
   }
 }
 
-function removeFromLocalStorage(key: string) {
-  try {
-    localStorage.removeItem(key)
-  } catch (error) {
-    console.error('Error removing from localStorage:', error)
-  }
-}
+/* removed unused localStorage helpers to satisfy ESLint */
 
-function clearLocalStorage() {
-  try {
-    Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key))
-  } catch (error) {
-    console.error('Error clearing localStorage:', error)
-  }
-}
-
-// Expose localStorage functions (similar to user's examples)
-function saveInventoryData<T>(key: string, value: T) {
-  saveToLocalStorage(key, value)
-}
-
-function loadInventoryData<T>(key: string, defaultValue: T): T {
-  return loadFromLocalStorage(key, defaultValue)
-}
-
-function removeInventoryData(key: string) {
-  removeFromLocalStorage(key)
-}
-
-function clearAllInventoryData() {
-  clearLocalStorage()
-}
 
 // Load data from localStorage on mount
 onMounted(() => {
@@ -1868,6 +1906,17 @@ function confirmAdd() {
   notifyMessage(`Added "${newItem.value.name}"`)
 }
 
+function markAllAsRead() {
+  notifications.value.forEach((n) => {
+    n.read = true
+  })
+}
+
+function viewAllNotifications() {
+  showNotifPopup.value = false
+  router.push('/notifications')
+}
+
 function notifyMessage(msg: string) {
   const toast = document.createElement('div')
   toast.innerText = msg
@@ -2004,18 +2053,24 @@ hr {
   min-width: 0;
 }
 
+.topbar-sticky-wrap {
+  position: sticky;
+  top: 24px;
+  z-index: 60;
+}
+
 .main-content :deep(.top-bar) {
-  width: 100%;
+  /* legacy overrides removed to avoid conflicting with BaseTopbar */
 }
 
 .main-content :deep(.top-bar-actions) {
-  min-width: min(100%, 360px);
+  /* legacy overrides removed */
 }
 
 .main-content :deep(.search-wrapper) {
-  flex: 1 1 280px;
-  min-width: 0;
+  /* legacy overrides removed */
 }
+
 
 .top-bar {
   background: white;
@@ -3372,8 +3427,9 @@ footer {
 }
 
 .desktop-topbar {
-  display: block;
+  display: block !important;
 }
+
 
 .mobile-top-shell {
   background: linear-gradient(180deg, #ffffff 0%, #f7faf7 100%);
@@ -3639,6 +3695,160 @@ footer {
   }
 }
 
+.notif-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(10, 28, 47, 0.35);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 80px 48px 0 0;
+}
+
+.notif-popup {
+  background: #ffffff;
+  border-radius: 20px;
+  width: 360px;
+  box-shadow: 0 20px 60px rgba(10, 28, 47, 0.18);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.notif-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.notif-popup-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #0a1c2f;
+}
+
+.mark-read-btn {
+  background: none;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #2c7a4d;
+  cursor: pointer;
+}
+
+.mark-read-btn:hover {
+  text-decoration: underline;
+}
+
+.notif-popup-list {
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.notif-popup-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  position: relative;
+  transition: background 0.15s;
+}
+
+.notif-popup-item:hover {
+  background: #f8fafc;
+}
+
+.notif-popup-item.unread {
+  background: #f0f7ff;
+}
+
+.notif-item-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e8f5e9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  border: 1.5px solid #c8e6c9;
+}
+
+.notif-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-item-title {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: #0a1c2f;
+  margin-bottom: 2px;
+}
+
+.notif-item-detail {
+  font-size: 0.78rem;
+  color: #577190;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notif-item-date {
+  font-size: 0.72rem;
+  color: #9aafc4;
+}
+
+.notif-unread-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2c7a4d;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.notif-empty {
+  padding: 24px;
+  text-align: center;
+  color: #9aafc4;
+  font-size: 0.88rem;
+}
+
+.notif-view-all-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-top: 1px solid #edf2f7;
+  background: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #2c7a4d;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s;
+}
+
+.notif-view-all-btn:hover {
+  background: #f0fdf4;
+}
+
+/* Blur the dashboard content when popup is open */
+.dashboard.blurred {
+  filter: blur(2px);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Responsive */
 @media (max-width: 1120px) {
   .dashboard {
     grid-template-columns: 1fr;
