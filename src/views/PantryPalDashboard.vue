@@ -47,7 +47,7 @@
         <div class="dashboard-grid">
           <!-- Welcome Card -->
           <div class="dashboard-card welcome-card">
-            <div class="welcome-name">Welcome back, Alex 👋</div>
+            <div class="welcome-name">Welcome back, {{ authStore.userName }} 👋</div>
             <div class="welcome-sub">You have 3 items expiring this week.</div>
           </div>
 
@@ -157,12 +157,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import BaseSidebar from '@/components/BaseSidebar.vue'
 import BaseTopbar from '@/components/BaseTopbar.vue'
 import BaseRightSidebar from '@/components/BaseRightSidebar.vue'
 import type { NavItem } from '@/components/BaseSidebar.vue'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 // ─── Notification popup ───────────────────────────────────────────────────────
 const showNotifPopup = ref(false)

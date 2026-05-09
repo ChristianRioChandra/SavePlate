@@ -21,7 +21,7 @@
             @click="$emit('open-notifications')"
           ></i>
           <i class="bi bi-gear clickable" @click="navigateToSettings" title="Settings"></i>
-          <i class="bi bi-box-arrow-right clickable" @click="navigateToHome" title="Logout"></i>
+          <i class="bi bi-box-arrow-right clickable" @click="handleLogout" title="Logout"></i>
         </slot>
       </div>
     </div>
@@ -30,8 +30,10 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 defineProps<{
   title: string
@@ -49,7 +51,8 @@ const navigateToSettings = () => {
   router.push('/settings')
 }
 
-const navigateToHome = () => {
+const handleLogout = async () => {
+  await authStore.logout()
   router.push('/')
 }
 </script>

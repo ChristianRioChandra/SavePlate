@@ -16,7 +16,7 @@
             <span v-if="unreadCount && unreadCount > 0" class="notif-badge">{{ unreadCount }}</span>
           </div>
           <i class="bi bi-gear clickable" @click="navigateToSettings" title="Settings"></i>
-          <i class="bi bi-box-arrow-right clickable" @click="navigateToHome" title="Logout"></i>
+          <i class="bi bi-box-arrow-right clickable" @click="handleLogout" title="Logout"></i>
         </slot>
       </div>
     </div>
@@ -25,8 +25,10 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 defineProps<{
   title: string
@@ -38,7 +40,10 @@ defineEmits<{
 }>()
 
 const navigateToSettings = () => router.push('/settings')
-const navigateToHome = () => router.push('/')
+const handleLogout = async () => {
+  await authStore.logout()
+  router.push('/')
+}
 </script>
 
 <style scoped>
