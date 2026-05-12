@@ -86,6 +86,8 @@ export async function addFoodItem(
     notes: payload.notes ?? null,
     status: FoodStatus.AVAILABLE,
     quantity_level: QuantityLevel.FULL,
+    reserved_quantity: null,
+    category_id: null,
     created_at: serverTimestamp(),
   })
   return docRef.id

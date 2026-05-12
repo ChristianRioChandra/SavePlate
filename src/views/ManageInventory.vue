@@ -291,8 +291,10 @@ manage inventory
         </div>
 
         <div class="modal-actions">
-          <button @click="closeAddModal" class="modal-cancel">Cancel</button>
-          <button @click="confirmAdd" class="modal-add">Add Item</button>
+          <button @click="closeAddModal" class="modal-cancel" :disabled="addModalSubmitting">Cancel</button>
+          <button @click="confirmAdd" class="modal-add" :disabled="addModalSubmitting">
+            {{ addModalSubmitting ? 'Adding...' : 'Add Item' }}
+          </button>
         </div>
       </div>
     </div>
@@ -1186,7 +1188,7 @@ import {
 import { addLocalAnalyticsEvent, addLocalAnalyticsEvents } from '@/services/localAnalyticsStore'
 import { getInventoryUiPrefs, updateInventoryUiPrefs, type InventoryUiPrefs } from '@/services/authService'
 import { onAuthStateChanged } from 'firebase/auth'
-import { collection, doc, getDoc, onSnapshot, orderBy, query, where } from 'firebase/firestore'
+import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 
 const route = useRoute()
 const router = useRouter()
@@ -1333,6 +1335,7 @@ function subscribeInventory(uid: string) {
 }
 
 const addModalOpen = ref(false)
+const addModalSubmitting = ref(false)
 const useModalOpen = ref(false)
 const confirmationModalOpen = ref(false)
 const currentUseItemId = ref<string | null>(null)
@@ -1403,6 +1406,8 @@ const qtyMap: Record<QuantityLevel, { percent: string; color: string; label: str
   high: { percent: '75%', color: '#16a34a', label: 'High (75%)' },
   full: { percent: '100%', color: '#6b7280', label: 'Full (100%)' },
 }
+
+const FIRESTORE_WRITE_TIMEOUT_MS = 10000
 
 function getVolumeQuantity(volume: string): number {
   const match = volume.match(/[\d.]+/)
@@ -1631,7 +1636,6 @@ function requestDeleteItem(id: string) {
 async function deleteItem(id: string) {
   try {
     await deleteFoodItem(id)
-    inventory.value = inventory.value.filter((i) => i.id !== id)
     selectedDonationIds.value.delete(id)
     notifyMessage('Item removed.')
   } catch (error) {
@@ -1665,7 +1669,6 @@ async function finishItem() {
   try {
     await markFoodAsUsed(item.id)
     recordInventoryAnalytics(item, 'used')
-    inventory.value = inventory.value.filter((i) => i.id !== currentUseItemId.value)
     selectedDonationIds.value.delete(currentUseItemId.value)
     closeUseModal()
     notifyMessage(`Finished "${item.name}"`)
@@ -1683,7 +1686,6 @@ async function confirmUse() {
     await updateFoodItem(currentUseItemId.value, {
       quantity_level: mapQuantityLevelToDb(selectedUseQuantity.value as QuantityLevel),
     })
-    item.quantityLevel = selectedUseQuantity.value
     closeUseModal()
     notifyMessage(`Updated "${item.name}" usage`)
   } catch (error) {
@@ -1719,7 +1721,6 @@ async function singleDonate(id: string) {
   try {
     await markFoodAsDonated(id)
     recordInventoryAnalytics(item, 'donated')
-    inventory.value = inventory.value.filter((i) => i.id !== id)
     selectedDonationIds.value.delete(id)
     notifyMessage('Donated item. Thank you for sharing!')
   } catch (error) {
@@ -1763,7 +1764,6 @@ async function bulkDonateAction() {
   )
   try {
     await Promise.all(ids.map((id) => markFoodAsDonated(id)))
-    inventory.value = inventory.value.filter((i) => !selectedDonationIds.value.has(i.id))
     selectedDonationIds.value.clear()
     notifyMessage(`Donated ${ids.length} item(s): ${names.join(', ')}. Thank you for reducing waste!`)
   } catch (error) {
@@ -1845,7 +1845,21 @@ function openAddModal() {
 }
 
 function closeAddModal() {
+  if (addModalSubmitting.value) return
   addModalOpen.value = false
+}
+
+function clearAddActionQuery() {
+  if (route.query.action === 'add') {
+    const nextQuery = { ...route.query }
+    delete nextQuery.action
+    void router.replace({ query: nextQuery })
+  }
+}
+
+function openAddModalFromQuery() {
+  openAddModal()
+  clearAddActionQuery()
 }
 
 // Watch for query parameter to auto-open add modal
@@ -1853,7 +1867,7 @@ watch(
   () => route.query.action,
   (action) => {
     if (action === 'add') {
-      openAddModal()
+      openAddModalFromQuery()
     }
   }
 )
@@ -1896,7 +1910,7 @@ onMounted(() => {
   })
 
   if (route.query.action === 'add') {
-    openAddModal()
+    openAddModalFromQuery()
   }
 })
 
@@ -1906,6 +1920,8 @@ watch(currentSort, scheduleSaveUiPrefs)
 watch(expandedCategories, scheduleSaveUiPrefs, { deep: true })
 
 async function confirmAdd() {
+  if (addModalSubmitting.value) return
+
   if (!newItem.value.name) {
     notifyMessage('Please enter a name')
     return
@@ -1921,8 +1937,9 @@ async function confirmAdd() {
 
   const expiryDays = calculateDaysUntil(newItem.value.expiryDate)
   const { quantity, unit } = parseVolumeInput(newItem.value.volume)
+  const itemName = newItem.value.name.trim()
   const newItemData = {
-    name: newItem.value.name,
+    name: itemName,
     description: newItem.value.description,
     volume: `${quantity} ${unit}`,
     location:
@@ -1940,35 +1957,46 @@ async function confirmAdd() {
     quantityLevel: selectedQuantityLevel.value,
   }
   try {
+    addModalSubmitting.value = true
     const uid = currentUid.value
     if (!uid) {
       notifyMessage('Please login first')
       return
     }
 
-    const newId = await addFoodItem(uid, {
-      name: newItem.value.name.trim(),
-      quantity,
-      unit,
-      expiryDate: newItem.value.expiryDate,
-      foodType: newItem.value.foodType,
-      type: selectedStorage.value as 'fridge' | 'pantry' | 'freezer' | 'countertop',
-      storageLocation: newItemData.location,
-      notes: newItem.value.description || null,
-    })
-
-    // Verify we can read back what we wrote (helps catch security rules / project mismatch fast).
-    const snap = await getDoc(doc(db, 'food', newId))
-    if (!snap.exists()) {
-      notifyMessage('Item was created but could not be read back. Check Firestore rules.')
-      return
-    }
+    await Promise.race([
+      addFoodItem(uid, {
+        name: itemName,
+        quantity,
+        unit,
+        expiryDate: newItem.value.expiryDate,
+        foodType: newItem.value.foodType,
+        type: selectedStorage.value as 'fridge' | 'pantry' | 'freezer' | 'countertop',
+        storageLocation: newItemData.location,
+        notes: newItem.value.description || null,
+      }),
+      new Promise<never>((_, reject) => {
+        window.setTimeout(() => {
+          reject(new Error('Timed out waiting for Firestore to confirm the save.'))
+        }, FIRESTORE_WRITE_TIMEOUT_MS)
+      }),
+    ])
   } catch (error) {
     console.error('Failed to add inventory item:', error)
-    const msg = (error as { code?: string; message?: string })?.message || 'Failed to add item.'
+    const code = (error as { code?: string })?.code
+    const rawMessage = (error as { message?: string })?.message || 'Failed to add item.'
+    const msg =
+      code === 'unavailable' || rawMessage.includes('Timed out waiting for Firestore')
+        ? 'Firestore is offline right now, so the item could not be confirmed in the database. Please check your connection and try again.'
+        : rawMessage
     notifyMessage(msg)
     return
+  } finally {
+    addModalSubmitting.value = false
   }
+
+  closeAddModal()
+  notifyMessage(`Successfully added "${itemName}" to the database.`)
 
   // Ensure the new item is visible after add
   const visibleUnderCurrentFilter =
@@ -1981,9 +2009,6 @@ async function confirmAdd() {
   }
 
   expandedCategories.value[selectedStorage.value as keyof typeof expandedCategories.value] = true
-
-  closeAddModal()
-  notifyMessage(`Added "${newItem.value.name}"`)
 }
 
 function markAllAsRead() {
@@ -3416,6 +3441,11 @@ footer {
   background: #e0e7f1;
 }
 
+.modal-cancel:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .modal-add {
   background: #2c7a4d;
   color: white;
@@ -3431,6 +3461,11 @@ footer {
 
 .modal-add:hover {
   background: #1f5a38;
+}
+
+.modal-add:disabled {
+  opacity: 0.75;
+  cursor: wait;
 }
 
 .confirmation-overlay {
