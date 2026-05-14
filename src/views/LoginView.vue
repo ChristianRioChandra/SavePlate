@@ -18,7 +18,7 @@ const loading = ref(false)
 export interface NavItem {
   label: string
   route: string
-  icon?: string // optional; if missing, uses nav-dot
+  icon?: string
 }
 
 withDefaults(
@@ -32,13 +32,13 @@ withDefaults(
 )
 
 const currentSlide = ref(0)
+const slideDuration = 5000 // 5 detik per slide
 
 interface Benefit {
   icon: string
   title: string
   desc: string
 }
-
 
 const benefits: Benefit[] = [
   {
@@ -49,22 +49,32 @@ const benefits: Benefit[] = [
   {
     icon: 'bi bi-heart-fill',
     title: 'Donation Over Disposal',
-    desc: 'Food that would be wasted goes to others who can use it',
+    desc: 'Food that would be wasted goes to others who can use it.',
   },
   {
     icon: 'fa-solid fa-calendar-check',
     title: 'Get organized',
-    desc: 'Centralized food inventory with categories and locations',
+    desc: 'Centralized food inventory with categories and locations.',
   },
 ]
 
 const activeBenefit = computed<Benefit>(() => benefits[currentSlide.value] ?? benefits[0]!)
 let slideInterval: ReturnType<typeof setInterval> | undefined
 
-onMounted(() => {
+const startCarousel = () => {
+  if (slideInterval) clearInterval(slideInterval)
   slideInterval = setInterval(() => {
     currentSlide.value = (currentSlide.value + 1) % benefits.length
-  }, 4000)
+  }, slideDuration)
+}
+
+const goToSlide = (index: number) => {
+  currentSlide.value = index
+  startCarousel() // Reset timer saat user klik manual
+}
+
+onMounted(() => {
+  startCarousel()
 })
 
 onUnmounted(() => {
@@ -83,37 +93,28 @@ const handleLogin = async () => {
 
   try {
     const user = await loginUser(email.value, password.value)
-
     const userEmail = user.email || email.value
-
-    console.log('FINAL EMAIL:', userEmail)
 
     if (!user.emailVerified) {
       error.value = 'Please verify your email before logging in.'
       return
     }
 
-    console.log('SEND TO:', userEmail)
-
     // Generate OTP Random Number
     const otp = Math.floor(100000 + Math.random() * 900000).toString()
     const expiryTime = Date.now() + 180000
 
-    // save OTP in localStorage
     localStorage.setItem('otp_code', otp)
     localStorage.setItem('otp_expiry', expiryTime.toString())
     localStorage.setItem('otp_email', userEmail)
 
-    console.log('OTP DEBUG:', otp)
+    try {
+      await sendOTPEmail(userEmail, otp)
+    } catch (err) {
+      console.error('Email error:', err)
+    }
 
-
-    sendOTPEmail(userEmail, otp)
-      .then(() => console.log('Email sent'))
-      .catch((err) => console.error('Email error:', err))
-
-    // route to OTP page
     router.push('/otp')
-
   } catch (err: unknown) {
     if (isFirebaseError(err)) {
       switch (err.code) {
@@ -134,138 +135,170 @@ const handleLogin = async () => {
     loading.value = false
   }
 }
-
-
 </script>
 
 <template>
   <div class="auth-container">
+    <!-- BAGIAN KIRI: FORM LOGIN -->
     <div class="left">
-      <div class="form-card">
+      <div class="form-wrapper">
         <img class="logo-image" :src="logoFull" :alt="appName" />
 
-
-
-        <!-- EMAIL (changed from username to email for Firebase) -->
-        <input v-model="email" type="email" placeholder="Email" :disabled="loading" />
-
-        <!-- PASSWORD -->
-        <div class="input-group">
-          <input
-            v-model="password"
-            :type="showPassword ? 'text' : 'password'"
-            placeholder="Password"
-            :disabled="loading"
-          />
-          <i
-            class="fa-solid"
-            :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"
-            @click="showPassword = !showPassword"
-          ></i>
+        <div class="form-header">
+          <h2>Welcome back</h2>
+          <p>Please enter your details to sign in.</p>
         </div>
 
-        <!-- ERROR -->
-        <p v-if="error" class="error">{{ error }}</p>
+        <div class="input-container">
+          <label>Email</label>
+          <input v-model="email" type="email" placeholder="Enter your email" :disabled="loading" />
+        </div>
 
-        <!-- LOGIN BUTTON -->
-        <button @click="handleLogin" :disabled="loading">
-          <span v-if="loading">Logging in...</span>
-          <span v-else>Login</span>
+        <div class="input-container">
+          <label>Password</label>
+          <div class="input-group">
+            <input
+              v-model="password"
+              :type="showPassword ? 'text' : 'password'"
+              placeholder="••••••••"
+              :disabled="loading"
+            />
+            <i
+              class="bi"
+              :class="showPassword ? 'bi-eye-slash' : 'bi-eye'"
+              @click="showPassword = !showPassword"
+            ></i>
+          </div>
+        </div>
+
+        <p v-if="error" class="error"><i class="bi bi-exclamation-circle-fill"></i> {{ error }}</p>
+
+        <button class="btn-login" @click="handleLogin" :disabled="loading">
+          <span v-if="loading" class="spinner"></span>
+          <span v-else>Sign In</span>
         </button>
 
-        <!-- LINK TO REGISTER -->
         <p class="link">
           Don't have an account?
-          <span @click="router.push('/register')">Register</span>
+          <span @click="router.push('/register')">Register now</span>
         </p>
       </div>
     </div>
 
+    <!-- BAGIAN KANAN: IMMERSIVE CAROUSEL -->
     <div
       class="right"
       :style="{ backgroundImage: `url(${loginBackground})` }"
       aria-label="PantryPal highlights"
     >
-      <div class="carousel-container">
-        <div class="carousel-slide" :key="activeBenefit.title">
-          <div class="carousel-icon">
-            <i :class="activeBenefit.icon"></i>
-          </div>
-          <h4>{{ activeBenefit.title }}</h4>
-          <p>{{ activeBenefit.desc }}</p>
-        </div>
+      <!-- Overlay Gradien Gelap dari bawah ke atas -->
+      <div class="carousel-overlay">
 
-        <div class="carousel-dots" aria-label="Carousel slides">
-          <button
+        <!-- Story Indicators (Progress Bars) -->
+        <div class="story-indicators">
+          <div
+            class="story-bar"
             v-for="(_, index) in benefits"
             :key="index"
-            type="button"
-            class="carousel-dot"
-            :class="{ active: index === currentSlide }"
-            :aria-label="`Show slide ${index + 1}`"
-            :aria-pressed="index === currentSlide"
-            @click="currentSlide = index"
-          ></button>
+            @click="goToSlide(index)"
+          >
+            <!-- Logika animasi: penuh jika sudah lewat, animasi jika aktif -->
+            <div
+              class="story-progress"
+              :class="{
+                'completed': index < currentSlide,
+                'active': index === currentSlide
+              }"
+              :key="currentSlide === index ? 'active' : 'inactive'"
+            ></div>
+          </div>
         </div>
+
+        <!-- Carousel Content dengan Animasi Slide Up -->
+        <transition name="slide-up" mode="out-in">
+          <div class="carousel-content" :key="activeBenefit.title">
+            <div class="icon-glass">
+              <i :class="activeBenefit.icon"></i>
+            </div>
+            <h1 class="carousel-title">{{ activeBenefit.title }}</h1>
+            <p class="carousel-desc">{{ activeBenefit.desc }}</p>
+          </div>
+        </transition>
+
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+* {
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+}
+
 .auth-container {
   display: flex;
   height: 100vh;
+
   background: #f1f5f9;
 }
 
+
 .left {
-  flex: 1;
+  flex: 0 0 45%;
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 40px;
 }
 
-.form-card {
-  background: #ffffff;
-  padding: 40px;
-  border-radius: 16px;
-  width: 400px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+.form-wrapper {
+  width: 100%;
+  max-width: 440px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-}
 
-.right {
-  flex: 1;
-  align-items: center;
-  background-color: #ffffff;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  display: flex;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 40px;
-}
-
-.logo-area {
-  display: flex;
-  align-items: center;
-  margin-bottom: 44px;
-  padding-left: 6px;
+  background: #ffffff;
+  padding: 48px 40px;
+  border-radius: 24px;
+  box-shadow: 0 12px 32px rgba(31, 47, 62, 0.08);
+  border: 1px solid rgba(226, 232, 240, 0.8);
 }
 
 .logo-image {
-  display: block;
-  width: min(100%, 175px);
-  height: auto;
-  padding-bottom: 25px;
+  width: 180px;
+  margin-bottom: 40px;
 }
 
-h2 {
+.form-header {
+  margin-bottom: 32px;
+}
+
+.form-header h2 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #0a1c2f;
+  margin: 0 0 8px;
+}
+
+.form-header p {
+  color: #64748b;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.input-container {
   margin-bottom: 20px;
+}
+
+.input-container label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 8px;
 }
 
 .input-group {
@@ -275,156 +308,248 @@ h2 {
 
 input {
   width: 100%;
-  padding: 12px;
-  margin: 8px 0;
-  border-radius: 8px;
-  border: 1px solid #ddd;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
   outline: none;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  background: #f8fafc;
+}
+
+input:focus {
+  border-color: #2c7a4d;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(44, 122, 77, 0.1);
 }
 
 input:disabled {
-  background: #f8fafc;
+  background: #e2e8f0;
   cursor: not-allowed;
 }
 
 .input-group input {
-  padding-right: 40px;
-}
-
-input:focus {
-  border-color: #22c55e;
+  padding-right: 44px;
 }
 
 .input-group i {
   position: absolute;
-  right: 10px;
+  right: 16px;
   top: 50%;
   transform: translateY(-50%);
   cursor: pointer;
-  color: #555;
+  color: #94a3b8;
+  transition: color 0.2s;
+}
+
+.input-group i:hover {
+  color: #2c7a4d;
 }
 
 .error {
-  color: red;
-  font-size: 12px;
-  margin-top: 5px;
-  text-align: center;
+  color: #e53e3e;
+  font-size: 0.85rem;
+  margin: 0 0 20px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-button {
+.btn-login {
   width: 100%;
-  padding: 12px;
-  margin-top: 10px;
+  padding: 14px;
   border: none;
-  border-radius: 8px;
-  background: #22c55e;
+  border-radius: 12px;
+  background: #2c7a4d;
   color: white;
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 1rem;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 52px;
 }
 
-button:hover:not(:disabled) {
-  background: #16a34a;
+.btn-login:hover:not(:disabled) {
+  background: #1f5a38;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(44, 122, 77, 0.25);
 }
 
-button:disabled {
-  background: #86efac;
+.btn-login:disabled {
+  background: #94bba5;
   cursor: not-allowed;
 }
 
+/* Loading Spinner */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .link {
-  margin-top: 10px;
-  font-size: 14px;
+  margin-top: 24px;
+  font-size: 0.9rem;
+  color: #64748b;
+  text-align: center;
 }
 
 .link span {
-  color: #22c55e;
+  color: #2c7a4d;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 700;
+  margin-left: 4px;
 }
 
-.carousel-container {
-  align-items: center;
+.link span:hover {
+  text-decoration: underline;
+}
+
+/* --- KANAN: IMMERSIVE CAROUSEL AREA --- */
+.right {
+  flex: 1;
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  overflow: hidden;
+}
+
+.carousel-overlay {
+  position: absolute;
+  inset: 0;
+  /* Gradien cinematik, gelap di atas (untuk progress bar) dan sangat gelap di bawah (untuk teks) */
+  background: linear-gradient(180deg, rgba(10, 28, 47, 0.4) 0%, rgba(10, 28, 47, 0.1) 40%, rgba(10, 28, 47, 0.95) 100%);
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  width: min(100%, 320px);
+  justify-content: space-between;
+  padding: 40px 60px 80px 60px;
 }
 
-.carousel-slide {
-  animation: slide-fade 0.35s ease;
-  background: rgba(255, 255, 255, 0.7);
-  min-height: 210px;
-  padding: 20px;
-  text-align: center;
+/* Story-style Progress Indicators */
+.story-indicators {
+  display: flex;
+  gap: 12px;
   width: 100%;
-  border-radius: 25px;
+  padding-top: 20px;
 }
 
-.carousel-icon {
-  color: #242424;
-  display: inline-block;
+.story-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+.story-progress {
+  height: 100%;
+  background: #ffffff;
+  width: 0%;
+  border-radius: 4px;
+}
+
+.story-progress.completed {
+  width: 100%;
+}
+
+.story-progress.active {
+  animation: fillProgress 5s linear forwards; /* 5s sesuai dengan slideDuration */
+}
+
+@keyframes fillProgress {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+/* Content Area */
+.carousel-content {
+  max-width: 600px;
+}
+
+.icon-glass {
+  width: 72px;
+  height: 72px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: #ffffff;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.carousel-title {
+  color: #ffffff;
   font-size: 3.2rem;
-  line-height: 1;
-  margin-bottom: 20px;
-  position: relative;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 0 0 16px;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
-
-
-.carousel-slide h4 {
-  color: #242424;
-  font-size: 1rem;
-  font-weight: 500;
-  line-height: 1.3;
-  margin: 0 0 14px;
-}
-
-.carousel-slide p {
-  color: #2b2b2b;
-  font-size: 0.72rem;
+.carousel-desc {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 1.1rem;
   line-height: 1.6;
   margin: 0;
+  font-weight: 400;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  max-width: 90%;
 }
 
-.carousel-dots {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
+/* Transisi Teks: Slide Up & Fade */
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.carousel-dot {
-  background: #ffffff;
-  border: 0;
-  border-radius: 50%;
-  cursor: pointer;
-  height: 18px;
-  padding: 0;
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
-  width: 18px;
+.slide-up-enter-from {
+  opacity: 0;
+  transform: translateY(30px);
 }
 
-.carousel-dot:not(.active) {
-  opacity: 0.35;
+.slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(-30px);
 }
 
-.carousel-dot.active {
-  transform: scale(1.08);
-}
-
-@keyframes slide-fade {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
+/* Responsif untuk layar kecil */
+@media (max-width: 992px) {
+  .auth-container {
+    flex-direction: column-reverse;
   }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  .left {
+    flex: 1;
+    padding: 20px;
+  }
+  .right {
+    flex: 0 0 350px;
+  }
+  .carousel-overlay {
+    padding: 30px;
+  }
+  .carousel-title {
+    font-size: 2rem;
   }
 }
-
 </style>
