@@ -18,9 +18,9 @@
           <div
             class="hero-summary"
             :class="{
-              'strong': securityStatus === 'Strong',
-              'balanced': securityStatus === 'Balanced',
-              'basic': securityStatus === 'Basic'
+              strong: securityStatus === 'Strong',
+              balanced: securityStatus === 'Balanced',
+              basic: securityStatus === 'Basic',
             }"
           >
             <span class="summary-label">Security status</span>
@@ -30,7 +30,7 @@
                 :class="{
                   'bi-shield-fill-check': securityStatus === 'Strong',
                   'bi-shield-fill-exclamation': securityStatus === 'Balanced',
-                  'bi-shield-fill-x': securityStatus === 'Basic'
+                  'bi-shield-fill-x': securityStatus === 'Basic',
                 }"
               ></i>
               {{ securityStatus }}
@@ -56,7 +56,7 @@
               class="toggle-switch"
               :class="{ active: twoFactorEnabled }"
               :aria-pressed="twoFactorEnabled"
-              @click="twoFactorEnabled = !twoFactorEnabled"
+              @click="toggle2FA"
             >
               <span class="toggle-track">
                 <span class="toggle-handle"></span>
@@ -106,7 +106,7 @@
               class="toggle-switch"
               :class="{ active: mailNotificationsEnabled }"
               :aria-pressed="mailNotificationsEnabled"
-              @click="mailNotificationsEnabled = !mailNotificationsEnabled"
+              @click="toggleMailNotifications"
             >
               <span class="toggle-track">
                 <span class="toggle-handle"></span>
@@ -213,6 +213,8 @@ interface AccountForm {
   householdSize: number
 }
 
+const authStore = useAuthStore()
+
 const navItems: NavItem[] = [
   { label: 'Dashboard', route: '/dashboard', icon: 'bi bi-graph-up' },
   { label: 'Inventory', route: '/inventory', icon: 'bi bi-box-seam' },
@@ -238,16 +240,64 @@ const foodListingVisibility = ref<VisibilityOption>('public')
 const isEditingProfile = ref(false)
 
 const account = reactive<AccountForm>({
-  username: 'Username Test',
-  email: 'test@email.com',
-  householdSize: 10,
+  username: '',
+  email: '',
+  householdSize: 1,
 })
 
 const draftAccount = reactive<AccountForm>({
-  username: account.username,
-  email: account.email,
-  householdSize: account.householdSize,
+  username: '',
+  email: '',
+  householdSize: 1,
 })
+
+onMounted(async () => {
+  const user = auth.currentUser
+  if (user) {
+    try {
+      const profile = await getUserProfile(user.uid)
+      account.username = profile.name
+      account.email = profile.email
+      account.householdSize = profile.householdSize || 1
+      twoFactorEnabled.value = profile.two_factor_enabled
+      mailNotificationsEnabled.value = profile.email_notifications_enabled ?? true
+      authStore.setTwoFactorEnabled(profile.two_factor_enabled)
+
+      draftAccount.username = account.username
+      draftAccount.email = account.email
+      draftAccount.householdSize = account.householdSize
+    } catch (err) {
+      console.error('Error fetching profile:', err)
+    }
+  }
+})
+
+const toggle2FA = async () => {
+  const user = auth.currentUser
+  if (!user) return
+
+  const newValue = !twoFactorEnabled.value
+  try {
+    await updateTwoFactorStatus(user.uid, newValue)
+    twoFactorEnabled.value = newValue
+    authStore.setTwoFactorEnabled(newValue)
+  } catch (err) {
+    console.error('Error updating 2FA status:', err)
+  }
+}
+
+const toggleMailNotifications = async () => {
+  const user = auth.currentUser
+  if (!user) return
+
+  const newValue = !mailNotificationsEnabled.value
+  try {
+    await updateEmailNotificationsStatus(user.uid, newValue)
+    mailNotificationsEnabled.value = newValue
+  } catch (err) {
+    console.error('Error updating mail notifications status:', err)
+  }
+}
 
 const visibilityLabel = computed(
   () =>
@@ -287,11 +337,22 @@ const cancelEditing = () => {
   isEditingProfile.value = false
 }
 
-const saveProfile = () => {
-  account.username = draftAccount.username || account.username
-  account.email = draftAccount.email || account.email
-  account.householdSize = Math.max(1, Number(draftAccount.householdSize) || account.householdSize)
-  isEditingProfile.value = false
+const saveProfile = async () => {
+  const user = auth.currentUser
+  if (!user) return
+
+  try {
+    await updateUserProfile(user.uid, {
+      name: draftAccount.username,
+      householdSize: draftAccount.householdSize,
+    })
+
+    account.username = draftAccount.username
+    account.householdSize = draftAccount.householdSize
+    isEditingProfile.value = false
+  } catch (err) {
+    console.error('Error saving profile:', err)
+  }
 }
 </script>
 
@@ -378,17 +439,17 @@ const saveProfile = () => {
 
 .hero-summary.strong {
   background: #1f5e3a;
-  box-shadow: 0 16px 32px rgba(44, 122, 77, 0.30);
+  box-shadow: 0 16px 32px rgba(44, 122, 77, 0.3);
 }
 
 .hero-summary.balanced {
   background: #f59e0b;
-  box-shadow: 0 16px 32px rgba(245, 158, 11, 0.30);
+  box-shadow: 0 16px 32px rgba(245, 158, 11, 0.3);
 }
 
 .hero-summary.basic {
   background: #ef4444;
-  box-shadow: 0 16px 32px rgba(239, 68, 68, 0.30);
+  box-shadow: 0 16px 32px rgba(239, 68, 68, 0.3);
 }
 
 .hero-summary strong {

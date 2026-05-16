@@ -3,11 +3,13 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import logoFull from '@/assets/logo/full.png'
 import loginBackground from '@/assets/background/bg1.png'
-import { loginUser } from '../services/authService'
+import { loginUser, getUserProfile } from '../services/authService'
 import { isFirebaseError } from '@/utils/firebaseErrors'
 import { sendOTPEmail } from '@/services/emailService'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const email = ref('')
 const password = ref('')

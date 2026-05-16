@@ -1,0 +1,15 @@
+{
+  "name": "pantrypal-scripts",
+  "version": "1.0.0",
+  "description": "Standalone server-side scripts for PantryPal (e.g. daily email notifications)",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "send-email": "node dailyEmail.cjs"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "firebase-admin": "^12.0.0",
+    "nodemailer": "^6.9.0"
+  }
+}

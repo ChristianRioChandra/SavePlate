@@ -1,38 +1,8 @@
 <template>
   <div class="dashboard-page">
-    <!-- ── Notification Popup Overlay ─────────────────────────────────────── -->
-    <Transition name="fade">
-      <div v-if="showNotifPopup" class="notif-overlay" @click.self="showNotifPopup = false">
-        <div class="notif-popup">
-          <div class="notif-popup-header">
-            <span class="notif-popup-title">Recent</span>
-            <button class="mark-read-btn" @click="markAllAsRead">Mark All As Read</button>
-          </div>
-          <div class="notif-popup-list">
-            <div
-              v-for="notif in notifications"
-              :key="notif.id"
-              class="notif-popup-item"
-              :class="{ unread: !notif.read }"
-            >
-              <div class="notif-item-icon">{{ notif.icon }}</div>
-              <div class="notif-item-body">
-                <div class="notif-item-title">{{ notif.title }}</div>
-                <div class="notif-item-detail">{{ notif.detail }}</div>
-                <div class="notif-item-date">{{ notif.date }}, {{ notif.time }}</div>
-              </div>
-              <div v-if="!notif.read" class="notif-unread-dot"></div>
-            </div>
-            <div v-if="notifications.length === 0" class="notif-empty">No new notifications</div>
-          </div>
-          <button class="notif-view-all-btn" @click="viewAllNotifications">
-            View All Notification
-          </button>
-        </div>
-      </div>
-    </Transition>
+    <!-- Topbar handles its own notification popup internaly now -->
 
-    <div class="dashboard" :class="{ blurred: showNotifPopup }">
+    <div class="dashboard">
       <BaseSidebar :nav-items="navItems" />
 
       <div class="main-content">
@@ -40,15 +10,13 @@
           title="Dashboard"
           search-placeholder="Search food, donations, meals..."
           v-model:search-value="searchQuery"
-          :unread-count="unreadCount"
-          @open-notifications="showNotifPopup = true"
         />
 
         <div class="dashboard-grid">
           <!-- Welcome Card -->
           <div class="dashboard-card welcome-card">
-            <div class="welcome-name">Welcome back, {{ authStore.userName }} 👋</div>
-            <div class="welcome-sub">You have 3 items expiring this week.</div>
+            <div class="welcome-name">Welcome, {{ authStore.userName }} 👋</div>
+            <div class="welcome-sub">Here's what's happening with your Inventory today.</div>
           </div>
 
           <!-- Expiry Alerts -->
@@ -58,8 +26,12 @@
               <span>Expiry Alerts</span>
             </div>
             <div class="alert-list">
-              <div class="alert-item">⚠ Bread is about to expire — 1 day left</div>
-              <div class="alert-item">⚠ Milk is about to expire — 2 days left</div>
+              <div v-for="alert in expiryAlerts" :key="alert.id" class="alert-item">
+                ⚠ {{ alert.name }} is about to expire — {{ alert.days }} day{{ alert.days !== 1 ? 's' : '' }} left
+              </div>
+              <div v-if="expiryAlerts.length === 0" class="no-alerts">
+                ✅ No items expiring soon!
+              </div>
             </div>
           </div>
 
@@ -70,7 +42,7 @@
               <span>Inventory</span>
             </div>
             <div class="inventory-list">
-              <div v-for="item in inventoryItems" :key="item.id" class="inventory-item">
+              <div v-for="item in limitedInventoryItems" :key="item.id" class="inventory-item">
                 <div class="inv-info">
                   <div class="inv-name">{{ item.name }}</div>
                   <div class="inv-sub">{{ item.location }} · {{ item.type }}</div>
@@ -90,21 +62,20 @@
               <span>This Week's Meal Plan</span>
             </div>
             <div class="meal-nav">
-              <button class="meal-nav-btn"><i class="bi bi-chevron-left"></i></button>
-              <span class="meal-day-title">Monday, 14 Apr</span>
-              <button class="meal-nav-btn"><i class="bi bi-chevron-right"></i></button>
+              <button class="meal-nav-btn" @click="changeDashboardDate(-1)">
+                <i class="bi bi-chevron-left"></i>
+              </button>
+              <span class="meal-day-title">{{ formattedDashboardDate }}</span>
+              <button class="meal-nav-btn" @click="changeDashboardDate(1)">
+                <i class="bi bi-chevron-right"></i>
+              </button>
             </div>
-            <div class="meal-slot">
-              <div class="meal-slot-label">Breakfast</div>
-              <div class="meal-slot-name">Cereal with Milk</div>
-            </div>
-            <div class="meal-slot">
-              <div class="meal-slot-label">Lunch</div>
-              <div class="meal-slot-empty">Not planned yet</div>
-            </div>
-            <div class="meal-slot">
-              <div class="meal-slot-label">Dinner</div>
-              <div class="meal-slot-name">Shrimp Fried Rice</div>
+            <div v-for="slot in dashboardMealSlots" :key="slot.type" class="meal-slot">
+              <div class="meal-slot-label">{{ slot.label }}</div>
+              <div v-if="getDashboardSlotMeal(slot.type)" class="meal-slot-name">
+                {{ getDashboardSlotMeal(slot.type) }}
+              </div>
+              <div v-else class="meal-slot-empty">Not planned yet</div>
             </div>
             <button class="card-action-btn" @click="router.push('/meal-plan')">
               Manage Plan →
@@ -144,7 +115,7 @@
 
       <BaseRightSidebar
         :total-items="inventoryItems.length"
-        :expiring-soon="3"
+        :expiring-soon="expiryAlerts.length"
         @add-food="handleAddFood"
         @donate-items="router.push('/donations')"
         @plan-meal="router.push('/meal-plan')"
@@ -154,11 +125,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { db } from '@/firebase'
-import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore'
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore'
+import { getMealPlan, type MealPlan } from '@/services/mealService'
 import BaseSidebar from '@/components/BaseSidebar.vue'
 import BaseTopbar from '@/components/BaseTopbar.vue'
 import BaseRightSidebar from '@/components/BaseRightSidebar.vue'
@@ -167,54 +139,8 @@ import type { NavItem } from '@/components/BaseSidebar.vue'
 const router = useRouter()
 const authStore = useAuthStore()
 
-// ─── Notification popup ───────────────────────────────────────────────────────
-const showNotifPopup = ref(false)
+// ─── Topbar is now a shared component ─────────────────────────────────────────
 
-interface NotifItem {
-  id: number
-  icon: string
-  title: string
-  type: string
-  detail: string
-  date: string
-  time: string
-  read: boolean
-}
-
-const notifications = ref<NotifItem[]>([
-  {
-    id: 1,
-    icon: '🥛',
-    title: 'Milk about to Expire',
-    type: 'Expiry Notification',
-    detail: 'Milk about to Expire',
-    date: '31 March 2026',
-    time: '09:30 AM',
-    read: false,
-  },
-  {
-    id: 2,
-    icon: '🍞',
-    title: 'Bread about to Expire',
-    type: 'Expiry Notification',
-    detail: 'Bread is expiring in 1 day. Use or donate it.',
-    date: '31 March 2026',
-    time: '08:00 AM',
-    read: true,
-  },
-])
-
-const unreadCount = ref(notifications.value.filter((n) => !n.read).length)
-
-function markAllAsRead() {
-  notifications.value.forEach((n) => (n.read = true))
-  unreadCount.value = 0
-}
-
-function viewAllNotifications() {
-  showNotifPopup.value = false
-  router.push('/notifications')
-}
 
 interface InventoryItem {
   id: string
@@ -223,6 +149,7 @@ interface InventoryItem {
   type: string
   tag: string
   warning?: boolean
+  expiryDate: string
 }
 
 const calculateDaysUntil = (expiryDateStr: string): number => {
@@ -249,30 +176,94 @@ const navItems: NavItem[] = [
 const inventoryItems = ref<InventoryItem[]>([])
 let unsubscribeInventory: (() => void) | null = null
 
+// Filter top 3 items for the dashboard summary
+const limitedInventoryItems = computed(() => inventoryItems.value.slice(0, 5))
+
+// Filter items expiring in 3 days or less for alerts
+const expiryAlerts = computed(() => {
+  return inventoryItems.value
+    .filter(item => {
+      const days = calculateDaysUntil(item.expiryDate)
+      return days <= 3
+    })
+    .map(item => ({
+      id: item.id,
+      name: item.name,
+      days: calculateDaysUntil(item.expiryDate)
+    }))
+    .slice(0, 3) // Show top 3 most urgent
+})
+
+// ─── Meal Plan (Dashboard) ────────────────────────────────────────────────────
+const dashboardDate = ref(new Date())
+const dashboardMealPlan = ref<MealPlan | null>(null)
+
+const dashboardMealSlots = [
+  { type: 'breakfast', label: 'Breakfast' },
+  { type: 'lunch', label: 'Lunch' },
+  { type: 'dinner', label: 'Dinner' },
+]
+
+const formattedDashboardDate = computed(() => {
+  return dashboardDate.value.toLocaleDateString('en-US', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'short',
+  })
+})
+
+const fetchDashboardMealPlan = async () => {
+  const user = authStore.user
+  if (!user) return
+
+  const dateStr = dashboardDate.value.toISOString().split('T')[0]!
+  try {
+    dashboardMealPlan.value = await getMealPlan(user.uid!, dateStr)
+  } catch (err) {
+    console.error('Error fetching dashboard meal plan:', err)
+  }
+}
+
+const changeDashboardDate = (days: number) => {
+  const newDate = new Date(dashboardDate.value)
+  newDate.setDate(newDate.getDate() + days)
+  dashboardDate.value = newDate
+  fetchDashboardMealPlan()
+}
+
+const getDashboardSlotMeal = (type: string) => {
+  if (!dashboardMealPlan.value) return null
+  const slot = dashboardMealPlan.value.slots.find((s) => s.type === type)
+  return slot?.meal || null
+}
+
 onMounted(() => {
-  if (authStore.user?.uid) {
+  if (authStore.user) {
+    // Note: Using 'food' collection and 'user_id' / 'expiry_date' to match foodService.ts
     const q = query(
-      collection(db, 'food'), // Corrected collection name to 'food'
-      where('user_id', '==', authStore.user.uid), // Corrected field name to 'user_id'
-      orderBy('created_at', 'desc'), // Corrected field name to 'created_at'
-      limit(3)
+      collection(db, 'food'),
+      where('user_id', '==', authStore.user.uid),
+      orderBy('expiry_date', 'asc'),
     )
 
-    unsubscribeInventory = onSnapshot(q, (snapshot) => {
-      inventoryItems.value = snapshot.docs.map(doc => {
-        const data = doc.data()
-        const daysLeft = calculateDaysUntil(data.expiry_date)
-
+    unsubscribeInventory = onSnapshot(q, (snap) => {
+      inventoryItems.value = snap.docs.map((d) => {
+        const data = d.data()
+        const days = calculateDaysUntil(data.expiry_date)
         return {
-          id: doc.id,
+          id: d.id,
           name: data.name,
-          location: data.storage_location || 'Pantry',
+          location: data.storage_location || 'Storage',
           type: data.food_type || 'Other',
-          tag: daysLeft < 0 ? 'Expired' : daysLeft === 0 ? 'Today' : `${daysLeft}d left`,
-          warning: daysLeft <= 3
+          tag: days <= 3 ? 'Expiring' : 'Good',
+          warning: days <= 3,
+          expiryDate: data.expiry_date // store for computed properties
         }
       })
     })
+
+    // Initial fetch for meal plan
+    fetchDashboardMealPlan()
   }
 })
 

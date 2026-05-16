@@ -9,7 +9,7 @@
           title="Notifications"
           search-placeholder="Search notifications..."
           v-model:search-value="searchQuery"
-          :unread-count="unreadCount"
+          :unread-count="notificationsStore.unreadCount"
           @open-notifications="() => { showNotifPopup = true }"
         >
           <template #actions>
@@ -32,14 +32,14 @@
         <!-- Notification List -->
         <div class="notif-list">
           <!-- Empty State -->
-          <div v-if="notifications.length === 0" class="notif-empty">
+          <div v-if="filteredNotifications.length === 0" class="notif-empty">
             <i class="bi bi-bell-slash"></i>
             <p>No notifications yet.</p>
           </div>
 
           <!-- Notification Item -->
           <div
-            v-for="notif in notifications"
+            v-for="notif in filteredNotifications"
             :key="notif.id"
             class="notif-item"
             :class="{ unread: !notif.read, selected: selectedIds.has(notif.id) }"
@@ -60,7 +60,7 @@
               <div class="notif-header-row">
                 <div class="notif-title-block">
                   <span class="notif-title">{{ notif.title }}</span>
-                  <span class="notif-type">{{ notif.type }}</span>
+                  <span class="notif-type">{{ notif.typeLabel }}</span>
                   <span class="notif-detail">{{ notif.detail }}</span>
                 </div>
                 <div class="notif-meta">
@@ -80,11 +80,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import BaseSidebar from '@/components/BaseSidebar.vue'
 import BaseTopbar from '@/components/BaseTopbar.vue'
 import type { NavItem } from '@/components/BaseSidebar.vue'
-
+import { useNotificationsStore } from '@/stores/notifications'
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', route: '/dashboard', icon: 'bi bi-graph-up' },
@@ -95,103 +95,62 @@ const navItems: NavItem[] = [
   { label: 'Settings', route: '/settings', icon: 'bi bi-gear' },
 ]
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface NotifItem {
-  id: number
-  icon: string
-  title: string
-  type: string
-  detail: string
-  date: string
-  time: string
-  read: boolean
-}
-
 // ─── State ────────────────────────────────────────────────────────────────────
+const notificationsStore = useNotificationsStore()
 const searchQuery = ref('')
-const unreadCount = computed(() => notifications.value.filter((n) => !n.read).length)
-
 const showNotifPopup = ref(false)
 
-const notifications = ref<NotifItem[]>([
-  {
-
-    id: 1,
-    icon: '🥛',
-    title: 'Ultra Milk : 500Ml Original, About to Expire Soon',
-    type: 'Expiry Notification',
-    detail: 'Hurry, Use or donate Ultra Milk : 500Ml Original Before it Spoils',
-    date: 'Saturday, 4 April 2026',
-    time: '09:30 AM',
-    read: false,
-  },
-  {
-    id: 2,
-    icon: '👤',
-    title: 'John Doe Interested in your Food Item',
-    type: 'Donation Request',
-    detail: 'I would love to contact you, regarding your food Item : Ultra Milk : 500Ml Original',
-    date: 'Saturday, 4 April 2026',
-    time: '09:30 AM',
-    read: false,
-  },
-  {
-    id: 3,
-    icon: '🍞',
-    title: 'Bread : 300g, About to Expire Soon',
-    type: 'Expiry Notification',
-    detail: 'Hurry, Use or donate Bread : 300g Before it Spoils',
-    date: 'Friday, 3 April 2026',
-    time: '08:00 AM',
-    read: true,
-  },
-])
-
-const selectedIds = ref<Set<number>>(new Set())
+const selectedIds = ref<Set<string>>(new Set())
 const selectAll = ref(false)
 
+// ─── Lifecycle ────────────────────────────────────────────────────────────────
+// Global listener handled in App.vue
+
+// ─── Filtered Notifications ───────────────────────────────────────────────────
+const filteredNotifications = computed(() => {
+  if (!searchQuery.value) return notificationsStore.notifications
+  const q = searchQuery.value.toLowerCase()
+  return notificationsStore.notifications.filter(n => 
+    n.title.toLowerCase().includes(q) || 
+    n.detail.toLowerCase().includes(q) ||
+    n.typeLabel.toLowerCase().includes(q)
+  )
+})
+
 // ─── Select / Deselect ────────────────────────────────────────────────────────
-function toggleSelect(id: number) {
+function toggleSelect(id: string) {
   if (selectedIds.value.has(id)) {
     selectedIds.value.delete(id)
   } else {
     selectedIds.value.add(id)
   }
   selectedIds.value = new Set(selectedIds.value) // trigger reactivity
-  selectAll.value = selectedIds.value.size === notifications.value.length
+  selectAll.value = selectedIds.value.size === filteredNotifications.value.length && filteredNotifications.value.length > 0
 }
 
 function toggleSelectAll() {
   if (selectAll.value) {
-    selectedIds.value = new Set(notifications.value.map((n) => n.id))
+    selectedIds.value = new Set(filteredNotifications.value.map((n) => n.id))
   } else {
     selectedIds.value = new Set()
   }
 }
 
-// Keep selectAll in sync when items change
-watch(
-  notifications,
-  () => {
-    if (selectedIds.value.size === 0) selectAll.value = false
-  },
-  { deep: true },
-)
-
 // ─── Actions ──────────────────────────────────────────────────────────────────
-function markSelectedAsRead() {
-  notifications.value.forEach((n) => {
-    if (selectedIds.value.has(n.id)) n.read = true
-  })
+async function markSelectedAsRead() {
+  const ids = Array.from(selectedIds.value)
+  await notificationsStore.markMultipleAsRead(ids)
   selectedIds.value = new Set()
   selectAll.value = false
 }
 
-function deleteSelected() {
-  notifications.value = notifications.value.filter((n) => !selectedIds.value.has(n.id))
+async function deleteSelected() {
+  const ids = Array.from(selectedIds.value)
+  await notificationsStore.deleteMultiple(ids)
   selectedIds.value = new Set()
   selectAll.value = false
 }
+
 </script>
 
 <style scoped>

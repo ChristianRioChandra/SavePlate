@@ -2,8 +2,10 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import logoFull from '@/assets/logo/full.png'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const otp = ref(['', '', '', '', '', ''])
 const inputs = ref<(HTMLInputElement | null)[]>([])
@@ -95,7 +97,7 @@ const verifyOTP = () => {
 
   localStorage.removeItem('otp_code')
   localStorage.removeItem('otp_expiry')
-  localStorage.setItem('isLogin', 'true')
+  authStore.setOtpVerified(true)
 
   router.push({ name: 'dashboard' })
 }
