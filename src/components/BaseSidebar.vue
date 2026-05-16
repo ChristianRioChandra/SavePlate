@@ -10,9 +10,9 @@
     >
       <img class="logo-image" :src="logoFull" :alt="appName" />
     </div>
-    <nav>
+    <nav class="main-nav">
       <div
-        v-for="item in navItems"
+        v-for="item in mainNavItems"
         :key="item.route"
         class="nav-item"
         :class="{ active: isActive(item.route) }"
@@ -23,11 +23,23 @@
         <span>{{ item.label }}</span>
       </div>
     </nav>
-    <hr />
+    <div v-if="settingsItem" class="footer-nav">
+      <hr />
+      <div
+        class="nav-item"
+        :class="{ active: isActive(settingsItem.route) }"
+        @click="navigateTo(settingsItem.route)"
+      >
+        <i v-if="settingsItem.icon" :class="settingsItem.icon"></i>
+        <span v-else class="nav-dot"></span>
+        <span>{{ settingsItem.label }}</span>
+      </div>
+    </div>
   </aside>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import logoFull from '@/assets/logo/full.png'
 
@@ -37,7 +49,7 @@ export interface NavItem {
   icon?: string // optional; if missing, uses nav-dot
 }
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     navItems: NavItem[]
     appName?: string
@@ -49,6 +61,9 @@ withDefaults(
 
 const router = useRouter()
 const route = useRoute()
+
+const mainNavItems = computed(() => props.navItems.filter((item) => item.label !== 'Settings'))
+const settingsItem = computed(() => props.navItems.find((item) => item.label === 'Settings'))
 
 const isActive = (itemRoute: string) => {
   if (itemRoute === '/') return route.path === '/'
@@ -63,9 +78,12 @@ const navigateTo = (routePath: string) => router.push(routePath)
   background: white;
   border-radius: 34px;
   box-shadow: 0 18px 45px rgba(31, 47, 62, 0.06);
-  padding: 34px 24px 26px;
+  padding: 34px 24px;
   position: sticky;
   top: 24px;
+  height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
 }
 
 .logo-area {
@@ -86,6 +104,15 @@ const navigateTo = (routePath: string) => router.push(routePath)
   display: block;
   width: min(100%, 168px);
   height: auto;
+}
+
+.main-nav {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.footer-nav {
+  margin-top: auto;
 }
 
 .nav-item {

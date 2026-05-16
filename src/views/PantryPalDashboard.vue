@@ -47,8 +47,8 @@
         <div class="dashboard-grid">
           <!-- Welcome Card -->
           <div class="dashboard-card welcome-card">
-            <div class="welcome-name">Welcome back, {{ authStore.userName }} 👋</div>
-            <div class="welcome-sub">You have 3 items expiring this week.</div>
+            <div class="welcome-name">Welcome, {{ authStore.userName }} 👋</div>
+            <div class="welcome-sub">Here's what's happening with your Inventory today.</div>
           </div>
 
           <!-- Expiry Alerts -->
@@ -90,21 +90,20 @@
               <span>This Week's Meal Plan</span>
             </div>
             <div class="meal-nav">
-              <button class="meal-nav-btn"><i class="bi bi-chevron-left"></i></button>
-              <span class="meal-day-title">Monday, 14 Apr</span>
-              <button class="meal-nav-btn"><i class="bi bi-chevron-right"></i></button>
+              <button class="meal-nav-btn" @click="changeDashboardDate(-1)">
+                <i class="bi bi-chevron-left"></i>
+              </button>
+              <span class="meal-day-title">{{ formattedDashboardDate }}</span>
+              <button class="meal-nav-btn" @click="changeDashboardDate(1)">
+                <i class="bi bi-chevron-right"></i>
+              </button>
             </div>
-            <div class="meal-slot">
-              <div class="meal-slot-label">Breakfast</div>
-              <div class="meal-slot-name">Cereal with Milk</div>
-            </div>
-            <div class="meal-slot">
-              <div class="meal-slot-label">Lunch</div>
-              <div class="meal-slot-empty">Not planned yet</div>
-            </div>
-            <div class="meal-slot">
-              <div class="meal-slot-label">Dinner</div>
-              <div class="meal-slot-name">Shrimp Fried Rice</div>
+            <div v-for="slot in dashboardMealSlots" :key="slot.type" class="meal-slot">
+              <div class="meal-slot-label">{{ slot.label }}</div>
+              <div v-if="getDashboardSlotMeal(slot.type)" class="meal-slot-name">
+                {{ getDashboardSlotMeal(slot.type) }}
+              </div>
+              <div v-else class="meal-slot-empty">Not planned yet</div>
             </div>
             <button class="card-action-btn" @click="router.push('/meal-plan')">
               Manage Plan →
@@ -154,11 +153,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { db } from '@/firebase'
-import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore'
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore'
+import { getMealPlan, type MealPlan } from '@/services/mealService'
 import BaseSidebar from '@/components/BaseSidebar.vue'
 import BaseTopbar from '@/components/BaseTopbar.vue'
 import BaseRightSidebar from '@/components/BaseRightSidebar.vue'
@@ -249,30 +249,68 @@ const navItems: NavItem[] = [
 const inventoryItems = ref<InventoryItem[]>([])
 let unsubscribeInventory: (() => void) | null = null
 
+// ─── Meal Plan (Dashboard) ────────────────────────────────────────────────────
+const dashboardDate = ref(new Date())
+const dashboardMealPlan = ref<MealPlan | null>(null)
+
+const dashboardMealSlots = [
+  { type: 'breakfast', label: 'Breakfast' },
+  { type: 'lunch', label: 'Lunch' },
+  { type: 'dinner', label: 'Dinner' },
+]
+
+const formattedDashboardDate = computed(() => {
+  return dashboardDate.value.toLocaleDateString('en-US', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'short',
+  })
+})
+
+const fetchDashboardMealPlan = async () => {
+  const user = authStore.user
+  if (!user) return
+
+  const dateStr = dashboardDate.value.toISOString().split('T')[0]
+  try {
+    dashboardMealPlan.value = await getMealPlan(user.uid!, dateStr)
+  } catch (err) {
+    console.error('Error fetching dashboard meal plan:', err)
+  }
+}
+
+const changeDashboardDate = (days: number) => {
+  const newDate = new Date(dashboardDate.value)
+  newDate.setDate(newDate.getDate() + days)
+  dashboardDate.value = newDate
+  fetchDashboardMealPlan()
+}
+
+const getDashboardSlotMeal = (type: string) => {
+  if (!dashboardMealPlan.value) return null
+  const slot = dashboardMealPlan.value.slots.find((s) => s.type === type)
+  return slot?.meal || null
+}
+
 onMounted(() => {
-  if (authStore.user?.uid) {
+  if (authStore.user) {
     const q = query(
-      collection(db, 'food'), // Corrected collection name to 'food'
-      where('user_id', '==', authStore.user.uid), // Corrected field name to 'user_id'
-      orderBy('created_at', 'desc'), // Corrected field name to 'created_at'
-      limit(3)
+      collection(db, 'inventory'),
+      where('userId', '==', authStore.user.uid),
+      orderBy('expiryDate', 'asc'),
     )
 
-    unsubscribeInventory = onSnapshot(q, (snapshot) => {
-      inventoryItems.value = snapshot.docs.map(doc => {
-        const data = doc.data()
-        const daysLeft = calculateDaysUntil(data.expiry_date)
-
-        return {
-          id: doc.id,
-          name: data.name,
-          location: data.storage_location || 'Pantry',
-          type: data.food_type || 'Other',
-          tag: daysLeft < 0 ? 'Expired' : daysLeft === 0 ? 'Today' : `${daysLeft}d left`,
-          warning: daysLeft <= 3
-        }
-      })
+    unsubscribeInventory = onSnapshot(q, (snap) => {
+      inventoryItems.value = snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+        tag: calculateDaysUntil(d.data().expiryDate) <= 3 ? 'Expiring' : 'Good',
+        warning: calculateDaysUntil(d.data().expiryDate) <= 3,
+      })) as InventoryItem[]
     })
+
+    // Initial fetch for meal plan
+    fetchDashboardMealPlan()
   }
 })
 

@@ -3,11 +3,13 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import logoFull from '@/assets/logo/full.png'
 import loginBackground from '@/assets/background/bg1.png'
-import { loginUser } from '../services/authService'
+import { loginUser, getUserProfile } from '../services/authService'
 import { isFirebaseError } from '@/utils/firebaseErrors'
 import { sendOTPEmail } from '@/services/emailService'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const email = ref('')
 const password = ref('')
@@ -93,8 +95,18 @@ const handleLogin = async () => {
       return
     }
 
-    console.log('SEND TO:', userEmail)
+    // Fetch user profile to check 2FA status
+    const profile = await getUserProfile(user.uid)
+    authStore.setTwoFactorEnabled(profile.two_factor_enabled)
+    
+    if (!profile.two_factor_enabled) {
+      console.log('2FA is disabled, logging in directly.')
+      authStore.setOtpVerified(true)
+      router.push('/dashboard')
+      return
+    }
 
+    // 2FA is enabled, proceed with OTP
     // Generate OTP Random Number
     const otp = Math.floor(100000 + Math.random() * 900000).toString()
     const expiryTime = Date.now() + 180000
@@ -105,7 +117,6 @@ const handleLogin = async () => {
     localStorage.setItem('otp_email', userEmail)
 
     console.log('OTP DEBUG:', otp)
-
 
     sendOTPEmail(userEmail, otp)
       .then(() => console.log('Email sent'))
