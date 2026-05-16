@@ -15,11 +15,16 @@
       </div>
       <div class="action-icons">
         <slot name="actions">
-          <i
-            class="bi bi-bell clickable"
-            title="Notifications"
-            @click="$emit('open-notifications')"
-          ></i>
+          <div class="notif-bell-container">
+            <i
+              class="bi bi-bell clickable"
+              title="Notifications"
+              @click="$emit('open-notifications')"
+            ></i>
+            <span v-if="unreadCount && unreadCount > 0" class="notif-badge">
+              {{ unreadCount > 9 ? '9+' : unreadCount }}
+            </span>
+          </div>
           <i class="bi bi-gear clickable" @click="navigateToSettings" title="Settings"></i>
           <i class="bi bi-box-arrow-right clickable" @click="handleLogout" title="Logout"></i>
         </slot>
@@ -127,5 +132,29 @@ const handleLogout = async () => {
 
 .action-icons i.clickable:hover {
   color: #2c7a4d;
+}
+
+.notif-bell-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  background: #dc2626;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  pointer-events: none;
 }
 </style>

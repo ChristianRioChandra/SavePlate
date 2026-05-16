@@ -23,17 +23,17 @@ manage inventory
               v-for="notif in notifications"
               :key="notif.id"
               class="notif-popup-item"
-              :class="{ unread: !notif.read }"
+              :class="{ unread: !notif.is_read }"
             >
               <div class="notif-item-icon">{{ notif.icon }}</div>
               <div class="notif-item-body">
                 <div class="notif-item-title">{{ notif.title }}</div>
-                <div class="notif-item-detail">{{ notif.detail }}</div>
+                <div class="notif-item-detail">{{ notif.message }}</div>
                 <div class="notif-item-date">
                   {{ notif.date }}, {{ notif.time }}
                 </div>
               </div>
-              <div v-if="!notif.read" class="notif-unread-dot"></div>
+              <div v-if="!notif.is_read" class="notif-unread-dot"></div>
             </div>
 
             <div v-if="notifications.length === 0" class="notif-empty">No new notifications</div>
@@ -1187,11 +1187,13 @@ import {
 } from '@/services/foodService'
 import { addLocalAnalyticsEvent, addLocalAnalyticsEvents } from '@/services/localAnalyticsStore'
 import { getInventoryUiPrefs, updateInventoryUiPrefs, type InventoryUiPrefs } from '@/services/authService'
+import { useNotificationsStore } from '@/stores/notifications'
 import { onAuthStateChanged } from 'firebase/auth'
 import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 
 const route = useRoute()
 const router = useRouter()
+const notificationsStore = useNotificationsStore()
 
 // Navigation items
 const navItems: NavItem[] = [
@@ -1236,38 +1238,18 @@ const compactStorageColumns = [
 const searchQuery = ref('')
 const showNotifPopup = ref(false)
 
-interface NotifItem {
-  id: number
-  icon: string
-  title: string
-  detail: string
-  date: string
-  time: string
-  read: boolean
+// Live notifications from store
+const notifications = computed(() => notificationsStore.notifications)
+const unreadCount = computed(() => notificationsStore.unreadCount)
+
+function markAllAsRead() {
+  notificationsStore.markAllAsRead()
 }
 
-const notifications = ref<NotifItem[]>([
-  {
-    id: 1,
-    icon: '🥛',
-    title: 'Milk about to Expire',
-    detail: 'Milk is about to Expire',
-    date: '31 March 2026',
-    time: '09:30 AM',
-    read: false,
-  },
-  {
-    id: 2,
-    icon: '🍞',
-    title: 'Bread about to Expire',
-    detail: 'Bread is expiring in 1 day. Use or donate it.',
-    date: '31 March 2026',
-    time: '08:00 AM',
-    read: true,
-  },
-])
-
-const unreadCount = computed(() => notifications.value.filter((n) => !n.read).length)
+function viewAllNotifications() {
+  showNotifPopup.value = false
+  router.push('/notifications')
+}
 
 const selectedDonationIds = ref<Set<string>>(new Set())
 const mobileFilterModalOpen = ref(false)
@@ -2011,16 +1993,6 @@ async function confirmAdd() {
   expandedCategories.value[selectedStorage.value as keyof typeof expandedCategories.value] = true
 }
 
-function markAllAsRead() {
-  notifications.value.forEach((n) => {
-    n.read = true
-  })
-}
-
-function viewAllNotifications() {
-  showNotifPopup.value = false
-  router.push('/notifications')
-}
 
 function notifyMessage(msg: string) {
   const toast = document.createElement('div')

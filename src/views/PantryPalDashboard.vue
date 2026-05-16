@@ -10,7 +10,7 @@
           </div>
           <div class="notif-popup-list">
             <div
-              v-for="notif in notifications"
+              v-for="notif in notificationsStore.notifications"
               :key="notif.id"
               class="notif-popup-item"
               :class="{ unread: !notif.read }"
@@ -23,7 +23,7 @@
               </div>
               <div v-if="!notif.read" class="notif-unread-dot"></div>
             </div>
-            <div v-if="notifications.length === 0" class="notif-empty">No new notifications</div>
+            <div v-if="notificationsStore.notifications.length === 0" class="notif-empty">No new notifications</div>
           </div>
           <button class="notif-view-all-btn" @click="viewAllNotifications">
             View All Notification
@@ -40,7 +40,7 @@
           title="Dashboard"
           search-placeholder="Search food, donations, meals..."
           v-model:search-value="searchQuery"
-          :unread-count="unreadCount"
+          :unread-count="notificationsStore.unreadCount"
           @open-notifications="showNotifPopup = true"
         />
 
@@ -58,8 +58,12 @@
               <span>Expiry Alerts</span>
             </div>
             <div class="alert-list">
-              <div class="alert-item">⚠ Bread is about to expire — 1 day left</div>
-              <div class="alert-item">⚠ Milk is about to expire — 2 days left</div>
+              <div v-for="alert in expiryAlerts" :key="alert.id" class="alert-item">
+                ⚠ {{ alert.name }} is about to expire — {{ alert.days }} day{{ alert.days !== 1 ? 's' : '' }} left
+              </div>
+              <div v-if="expiryAlerts.length === 0" class="no-alerts">
+                ✅ No items expiring soon!
+              </div>
             </div>
           </div>
 
@@ -70,7 +74,7 @@
               <span>Inventory</span>
             </div>
             <div class="inventory-list">
-              <div v-for="item in inventoryItems" :key="item.id" class="inventory-item">
+              <div v-for="item in limitedInventoryItems" :key="item.id" class="inventory-item">
                 <div class="inv-info">
                   <div class="inv-name">{{ item.name }}</div>
                   <div class="inv-sub">{{ item.location }} · {{ item.type }}</div>
@@ -143,7 +147,7 @@
 
       <BaseRightSidebar
         :total-items="inventoryItems.length"
-        :expiring-soon="3"
+        :expiring-soon="expiryAlerts.length"
         @add-food="handleAddFood"
         @donate-items="router.push('/donations')"
         @plan-meal="router.push('/meal-plan')"
@@ -156,6 +160,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useNotificationsStore } from '@/stores/notifications'
 import { db } from '@/firebase'
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore'
 import { getMealPlan, type MealPlan } from '@/services/mealService'
@@ -166,55 +171,20 @@ import type { NavItem } from '@/components/BaseSidebar.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const notificationsStore = useNotificationsStore()
 
 // ─── Notification popup ───────────────────────────────────────────────────────
 const showNotifPopup = ref(false)
 
-interface NotifItem {
-  id: number
-  icon: string
-  title: string
-  type: string
-  detail: string
-  date: string
-  time: string
-  read: boolean
-}
-
-const notifications = ref<NotifItem[]>([
-  {
-    id: 1,
-    icon: '🥛',
-    title: 'Milk about to Expire',
-    type: 'Expiry Notification',
-    detail: 'Milk about to Expire',
-    date: '31 March 2026',
-    time: '09:30 AM',
-    read: false,
-  },
-  {
-    id: 2,
-    icon: '🍞',
-    title: 'Bread about to Expire',
-    type: 'Expiry Notification',
-    detail: 'Bread is expiring in 1 day. Use or donate it.',
-    date: '31 March 2026',
-    time: '08:00 AM',
-    read: true,
-  },
-])
-
-const unreadCount = ref(notifications.value.filter((n) => !n.read).length)
-
 function markAllAsRead() {
-  notifications.value.forEach((n) => (n.read = true))
-  unreadCount.value = 0
+  notificationsStore.markAllAsRead()
 }
 
 function viewAllNotifications() {
   showNotifPopup.value = false
   router.push('/notifications')
 }
+
 
 interface InventoryItem {
   id: string
@@ -249,6 +219,24 @@ const navItems: NavItem[] = [
 const inventoryItems = ref<InventoryItem[]>([])
 let unsubscribeInventory: (() => void) | null = null
 
+// Filter top 3 items for the dashboard summary
+const limitedInventoryItems = computed(() => inventoryItems.value.slice(0, 5))
+
+// Filter items expiring in 3 days or less for alerts
+const expiryAlerts = computed(() => {
+  return inventoryItems.value
+    .filter(item => {
+      const days = calculateDaysUntil(item.expiryDate)
+      return days <= 3
+    })
+    .map(item => ({
+      id: item.id,
+      name: item.name,
+      days: calculateDaysUntil(item.expiryDate)
+    }))
+    .slice(0, 3) // Show top 3 most urgent
+})
+
 // ─── Meal Plan (Dashboard) ────────────────────────────────────────────────────
 const dashboardDate = ref(new Date())
 const dashboardMealPlan = ref<MealPlan | null>(null)
@@ -271,7 +259,7 @@ const fetchDashboardMealPlan = async () => {
   const user = authStore.user
   if (!user) return
 
-  const dateStr = dashboardDate.value.toISOString().split('T')[0]
+  const dateStr = dashboardDate.value.toISOString().split('T')[0]!
   try {
     dashboardMealPlan.value = await getMealPlan(user.uid!, dateStr)
   } catch (err) {
@@ -294,19 +282,27 @@ const getDashboardSlotMeal = (type: string) => {
 
 onMounted(() => {
   if (authStore.user) {
+    // Note: Using 'food' collection and 'user_id' / 'expiry_date' to match foodService.ts
     const q = query(
-      collection(db, 'inventory'),
-      where('userId', '==', authStore.user.uid),
-      orderBy('expiryDate', 'asc'),
+      collection(db, 'food'),
+      where('user_id', '==', authStore.user.uid),
+      orderBy('expiry_date', 'asc'),
     )
 
     unsubscribeInventory = onSnapshot(q, (snap) => {
-      inventoryItems.value = snap.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-        tag: calculateDaysUntil(d.data().expiryDate) <= 3 ? 'Expiring' : 'Good',
-        warning: calculateDaysUntil(d.data().expiryDate) <= 3,
-      })) as InventoryItem[]
+      inventoryItems.value = snap.docs.map((d) => {
+        const data = d.data()
+        const days = calculateDaysUntil(data.expiry_date)
+        return {
+          id: d.id,
+          name: data.name,
+          location: data.storage_location || 'Storage',
+          type: data.food_type || 'Other',
+          tag: days <= 3 ? 'Expiring' : 'Good',
+          warning: days <= 3,
+          expiryDate: data.expiry_date // store for computed properties
+        }
+      })
     })
 
     // Initial fetch for meal plan
