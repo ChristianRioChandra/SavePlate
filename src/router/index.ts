@@ -86,9 +86,27 @@ router.beforeEach(async (to) => {
   const isPublicPage = publicPages.includes(to.name as string) || to.path === '/'
   const isOtpPage = to.name === 'otp'
 
-  // 1. Not authenticated -> redirect to login (unless public)
-  if (!authStore.isAuthOnly && !isPublicPage) {
+// to:
+router.beforeEach((to) => {
+  const isLogin = localStorage.getItem('isLogin')
+  const hasOTP = localStorage.getItem('otp_code')
+
+  // route public
+  const publicPages = ['landing', 'login', 'register']
+
+  if (!isLogin && !publicPages.includes(to.name as string)) {
     return '/login'
+  }
+
+  if (to.name === 'otp' && !hasOTP) {
+    return '/login'
+  }
+
+  if (
+    isLogin &&
+    (to.name === 'login' || to.name === 'register')
+  ) {
+    return '/dashboard'
   }
 
   // 2. Authenticated but 2FA required -> redirect to OTP (unless already on OTP or public)

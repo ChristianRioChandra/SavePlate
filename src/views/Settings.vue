@@ -201,15 +201,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, onMounted } from 'vue'
-import { auth } from '@/firebase'
-import {
-  getUserProfile,
-  updateUserProfile,
-  updateTwoFactorStatus,
-  updateEmailNotificationsStatus,
-} from '@/services/authService'
-import { useAuthStore } from '@/stores/auth'
+import { computed, reactive, ref, watch } from 'vue'
 import BaseSidebar from '@/components/BaseSidebar.vue'
 import type { NavItem } from '@/components/BaseSidebar.vue'
 
@@ -238,8 +230,12 @@ const visibilityOptions: Array<{ label: string; value: VisibilityOption }> = [
   { label: 'Private', value: 'private' },
 ]
 
-const twoFactorEnabled = ref(false)
+const twoFactorEnabled = ref(localStorage.getItem('2fa_enabled') !== 'false')
 const mailNotificationsEnabled = ref(true)
+
+watch(twoFactorEnabled, (newValue) => {
+  localStorage.setItem('2fa_enabled', newValue.toString())
+})
 const foodListingVisibility = ref<VisibilityOption>('public')
 const isEditingProfile = ref(false)
 
