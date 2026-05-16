@@ -5,46 +5,7 @@ manage inventory
 
 <template>
   <div class="manage-inventory-page">
-    <!-- ── Notification Popup Overlay ─────────────────────────────────────── -->
-    <Transition name="fade">
-      <div
-        v-if="showNotifPopup"
-        class="notif-overlay"
-        @click.self="showNotifPopup = false"
-      >
-        <div class="notif-popup">
-          <div class="notif-popup-header">
-            <span class="notif-popup-title">Recent</span>
-            <button class="mark-read-btn" @click="markAllAsRead">Mark All As Read</button>
-          </div>
-
-          <div class="notif-popup-list">
-            <div
-              v-for="notif in notifications"
-              :key="notif.id"
-              class="notif-popup-item"
-              :class="{ unread: !notif.is_read }"
-            >
-              <div class="notif-item-icon">{{ notif.icon }}</div>
-              <div class="notif-item-body">
-                <div class="notif-item-title">{{ notif.title }}</div>
-                <div class="notif-item-detail">{{ notif.message }}</div>
-                <div class="notif-item-date">
-                  {{ notif.date }}, {{ notif.time }}
-                </div>
-              </div>
-              <div v-if="!notif.is_read" class="notif-unread-dot"></div>
-            </div>
-
-            <div v-if="notifications.length === 0" class="notif-empty">No new notifications</div>
-          </div>
-
-          <button class="notif-view-all-btn" @click="viewAllNotifications">
-            View All Notification
-          </button>
-        </div>
-      </div>
-    </Transition>
+    <!-- Topbar handles its own notification popup internally now -->
 
     <!-- USE MODAL -->
     <div v-if="useModalOpen" class="modal-overlay" style="display: flex">
@@ -400,8 +361,6 @@ manage inventory
             title="Manage Inventory"
             search-placeholder="Search food, donations, meals..."
             v-model:search-value="searchQuery"
-            :unread-count="unreadCount"
-            @open-notifications="showNotifPopup = true"
           />
         </div>
 
@@ -1236,20 +1195,6 @@ const compactStorageColumns = [
 ] as const
 
 const searchQuery = ref('')
-const showNotifPopup = ref(false)
-
-// Live notifications from store
-const notifications = computed(() => notificationsStore.notifications)
-const unreadCount = computed(() => notificationsStore.unreadCount)
-
-function markAllAsRead() {
-  notificationsStore.markAllAsRead()
-}
-
-function viewAllNotifications() {
-  showNotifPopup.value = false
-  router.push('/notifications')
-}
 
 const selectedDonationIds = ref<Set<string>>(new Set())
 const mobileFilterModalOpen = ref(false)

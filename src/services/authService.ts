@@ -37,6 +37,7 @@ export interface UserProfile {
   two_factor_enabled: boolean
   privacy_settings: PrivacySettings
   inventory_ui_prefs?: InventoryUiPrefs
+  email_notifications_enabled?: boolean
   created_at: unknown // Firestore Timestamp
 }
 
@@ -75,6 +76,7 @@ export async function registerUser({
     householdSize,
     is_verified: false,
     two_factor_enabled: false,
+    email_notifications_enabled: true,
     privacy_settings: {
       listing_visibility: 'public',
       show_location: true,
@@ -196,4 +198,8 @@ export async function enroll2FAComplete(
 
 export async function updateTwoFactorStatus(uid: string, enabled: boolean): Promise<void> {
   await updateDoc(doc(db, 'users', uid), { two_factor_enabled: enabled })
+}
+
+export async function updateEmailNotificationsStatus(uid: string, enabled: boolean): Promise<void> {
+  await updateDoc(doc(db, 'users', uid), { email_notifications_enabled: enabled })
 }

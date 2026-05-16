@@ -4,7 +4,7 @@
       <BaseSidebar :nav-items="navItems" />
 
       <div class="main-content">
-        <BaseTopbar2
+        <BaseTopbar
           title="Meal Plan"
           search-placeholder="Search meals or ingredients..."
           v-model:search-value="mealSearch"
@@ -330,8 +330,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import BaseSidebar from '@/components/BaseSidebar.vue'
-import BaseTopbar2 from '@/components/BaseTopbar2.vue'
+import BaseTopbar from '@/components/BaseTopbar.vue'
 import BaseRightSidebar from '@/components/BaseRightSidebar.vue'
 import type { NavItem } from '@/components/BaseSidebar.vue'
 import { auth } from '@/firebase'

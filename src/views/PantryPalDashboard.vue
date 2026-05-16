@@ -1,38 +1,8 @@
 <template>
   <div class="dashboard-page">
-    <!-- ── Notification Popup Overlay ─────────────────────────────────────── -->
-    <Transition name="fade">
-      <div v-if="showNotifPopup" class="notif-overlay" @click.self="showNotifPopup = false">
-        <div class="notif-popup">
-          <div class="notif-popup-header">
-            <span class="notif-popup-title">Recent</span>
-            <button class="mark-read-btn" @click="markAllAsRead">Mark All As Read</button>
-          </div>
-          <div class="notif-popup-list">
-            <div
-              v-for="notif in notificationsStore.notifications"
-              :key="notif.id"
-              class="notif-popup-item"
-              :class="{ unread: !notif.read }"
-            >
-              <div class="notif-item-icon">{{ notif.icon }}</div>
-              <div class="notif-item-body">
-                <div class="notif-item-title">{{ notif.title }}</div>
-                <div class="notif-item-detail">{{ notif.detail }}</div>
-                <div class="notif-item-date">{{ notif.date }}, {{ notif.time }}</div>
-              </div>
-              <div v-if="!notif.read" class="notif-unread-dot"></div>
-            </div>
-            <div v-if="notificationsStore.notifications.length === 0" class="notif-empty">No new notifications</div>
-          </div>
-          <button class="notif-view-all-btn" @click="viewAllNotifications">
-            View All Notification
-          </button>
-        </div>
-      </div>
-    </Transition>
+    <!-- Topbar handles its own notification popup internaly now -->
 
-    <div class="dashboard" :class="{ blurred: showNotifPopup }">
+    <div class="dashboard">
       <BaseSidebar :nav-items="navItems" />
 
       <div class="main-content">
@@ -40,8 +10,6 @@
           title="Dashboard"
           search-placeholder="Search food, donations, meals..."
           v-model:search-value="searchQuery"
-          :unread-count="notificationsStore.unreadCount"
-          @open-notifications="showNotifPopup = true"
         />
 
         <div class="dashboard-grid">
@@ -160,7 +128,6 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { useNotificationsStore } from '@/stores/notifications'
 import { db } from '@/firebase'
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore'
 import { getMealPlan, type MealPlan } from '@/services/mealService'
@@ -171,19 +138,8 @@ import type { NavItem } from '@/components/BaseSidebar.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const notificationsStore = useNotificationsStore()
 
-// ─── Notification popup ───────────────────────────────────────────────────────
-const showNotifPopup = ref(false)
-
-function markAllAsRead() {
-  notificationsStore.markAllAsRead()
-}
-
-function viewAllNotifications() {
-  showNotifPopup.value = false
-  router.push('/notifications')
-}
+// ─── Topbar is now a shared component ─────────────────────────────────────────
 
 
 interface InventoryItem {
@@ -193,6 +149,7 @@ interface InventoryItem {
   type: string
   tag: string
   warning?: boolean
+  expiryDate: string
 }
 
 const calculateDaysUntil = (expiryDateStr: string): number => {

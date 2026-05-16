@@ -106,7 +106,7 @@
               class="toggle-switch"
               :class="{ active: mailNotificationsEnabled }"
               :aria-pressed="mailNotificationsEnabled"
-              @click="mailNotificationsEnabled = !mailNotificationsEnabled"
+              @click="toggleMailNotifications"
             >
               <span class="toggle-track">
                 <span class="toggle-handle"></span>
@@ -203,7 +203,12 @@
 <script setup lang="ts">
 import { computed, reactive, ref, onMounted } from 'vue'
 import { auth } from '@/firebase'
-import { getUserProfile, updateUserProfile, updateTwoFactorStatus } from '@/services/authService'
+import {
+  getUserProfile,
+  updateUserProfile,
+  updateTwoFactorStatus,
+  updateEmailNotificationsStatus,
+} from '@/services/authService'
 import { useAuthStore } from '@/stores/auth'
 import BaseSidebar from '@/components/BaseSidebar.vue'
 import type { NavItem } from '@/components/BaseSidebar.vue'
@@ -259,6 +264,7 @@ onMounted(async () => {
       account.email = profile.email
       account.householdSize = profile.householdSize || 1
       twoFactorEnabled.value = profile.two_factor_enabled
+      mailNotificationsEnabled.value = profile.email_notifications_enabled ?? true
       authStore.setTwoFactorEnabled(profile.two_factor_enabled)
 
       draftAccount.username = account.username
@@ -281,6 +287,19 @@ const toggle2FA = async () => {
     authStore.setTwoFactorEnabled(newValue)
   } catch (err) {
     console.error('Error updating 2FA status:', err)
+  }
+}
+
+const toggleMailNotifications = async () => {
+  const user = auth.currentUser
+  if (!user) return
+
+  const newValue = !mailNotificationsEnabled.value
+  try {
+    await updateEmailNotificationsStatus(user.uid, newValue)
+    mailNotificationsEnabled.value = newValue
+  } catch (err) {
+    console.error('Error updating mail notifications status:', err)
   }
 }
 
