@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import logoFull from '@/assets/logo/full.png'
 import registerBackground from '@/assets/background/bg1.png'
 import { registerUser } from '../services/authService'
+import { auth } from '../firebase'
 import { isFirebaseError } from '@/utils/firebaseErrors'
 
 
@@ -124,7 +125,21 @@ const handleRegister = async () => {
       router.push('/login')
     }, 2500)
   } catch (err: unknown) {
+    console.error('Registration error:', err)
+
     if (isFirebaseError(err)) {
+      // If we have an auth user, it means createUserWithEmailAndPassword succeeded
+      // but something later (sendEmailVerification or setDoc) failed.
+      if (auth.currentUser) {
+        success.value = 'Account created! Please check your email to verify. (Note: Profile setup had a minor issue, but you can still log in.)'
+        
+        // Redirect to login anyway since the account exists
+        setTimeout(() => {
+          router.push('/login')
+        }, 4000)
+        return
+      }
+
       switch (err.code) {
         case 'auth/email-already-in-use':
           error.value = 'An account with this email already exists.'
@@ -135,8 +150,11 @@ const handleRegister = async () => {
         case 'auth/weak-password':
           error.value = 'Password is too weak. Use at least 6 characters.'
           break
+        case 'permission-denied':
+          error.value = 'Profile creation failed due to permission rules. Please contact support.'
+          break
         default:
-          error.value = 'Registration failed. Please try again.'
+          error.value = `Registration failed: ${err.code}. Please try again.`
       }
     } else {
       error.value = 'An unexpected error occurred. Please try again.'

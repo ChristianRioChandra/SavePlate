@@ -75,33 +75,32 @@ const router = createRouter({
   ],
 })
 
-// change from:
-router.beforeEach((to, from, next) => {
-  const isLogin = localStorage.getItem('isLogin')
-  if (
-    !isLogin &&
-    to.name !== 'login' &&
-    to.name !== 'register' &&
-    to.name !== 'otp' &&
-    to.path !== '/'
-  ) {
-    next('/login')
-  } else {
-    next()
-  }
-})
+import { useAuthStore } from '@/stores/auth'
 
-// to:
-router.beforeEach((to) => {
-  const isLogin = localStorage.getItem('isLogin')
-  if (
-    !isLogin &&
-    to.name !== 'login' &&
-    to.name !== 'register' &&
-    to.name !== 'otp' &&
-    to.path !== '/'
-  ) {
+router.beforeEach(async (to) => {
+  const authStore = useAuthStore()
+  await authStore.isReady
+
+  // Define route groups
+  const publicPages = ['login', 'register', 'landing']
+  const isPublicPage = publicPages.includes(to.name as string) || to.path === '/'
+  const isOtpPage = to.name === 'otp'
+
+  // 1. Not authenticated -> redirect to login (unless public)
+  if (!authStore.isAuthOnly && !isPublicPage) {
     return '/login'
+  }
+
+  // 2. Authenticated but 2FA required -> redirect to OTP (unless already on OTP or public)
+  if (authStore.isAuthOnly && authStore.is2FARequired && !isOtpPage && !isPublicPage) {
+    return '/otp'
+  }
+
+  // 3. Already logged in and verified -> prevent going back to login/register/otp
+  if (authStore.isLoggedIn && (isPublicPage || isOtpPage) && to.name !== 'landing') {
+    if (to.name !== 'landing') {
+        return '/dashboard'
+    }
   }
 })
 export default router

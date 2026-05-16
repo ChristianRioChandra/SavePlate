@@ -1,11 +1,12 @@
 <!-- App.vue -->
 <template>
+  <SessionTimer />
   <RouterView />
 </template>
 
 <script setup lang="ts">
-// import manageInventory from './views/ManageInventory.vue' // Adjust path as needed
 import { RouterView } from 'vue-router'
+import SessionTimer from '@/components/SessionTimer.vue'
 </script>
 
 <style scoped>

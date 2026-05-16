@@ -79,6 +79,19 @@ export async function registerUser({
       listing_visibility: 'public',
       show_location: true,
     } as PrivacySettings,
+    inventory_ui_prefs: {
+      layout: 'cards',
+      filter: '',
+      sort: 'name',
+      expanded_categories: {
+        all: true,
+        fridge: true,
+        pantry: true,
+        freezer: true,
+        countertop: true,
+        expiry: true,
+      },
+    } as InventoryUiPrefs,
     created_at: serverTimestamp(),
   })
 
@@ -179,4 +192,8 @@ export async function enroll2FAComplete(
   await multiFactor(user).enroll(multiFactorAssertion, 'Phone Number')
 
   await updateDoc(doc(db, 'users', uid), { two_factor_enabled: true })
+}
+
+export async function updateTwoFactorStatus(uid: string, enabled: boolean): Promise<void> {
+  await updateDoc(doc(db, 'users', uid), { two_factor_enabled: enabled })
 }

@@ -191,11 +191,11 @@ service cloud.firestore {
         ]) &&
         isNonEmptyString(data.name, 80) &&
         isValidEmail(data.email) &&
-        (data.householdSize == null || (data.householdSize is number && data.householdSize >= 1 && data.householdSize <= 50)) &&
+        (data.get('householdSize', null) == null || (data.householdSize is number && data.householdSize >= 1 && data.householdSize <= 50)) &&
         data.is_verified is bool &&
         data.two_factor_enabled is bool &&
         validPrivacySettings(data.privacy_settings) &&
-        validInventoryUiPrefs(data.inventory_ui_prefs) &&
+        validInventoryUiPrefs(data.get('inventory_ui_prefs', null)) &&
         data.created_at is timestamp &&
         isOwner(userId);
     }
