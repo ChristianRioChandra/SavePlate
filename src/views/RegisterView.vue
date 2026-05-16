@@ -118,8 +118,13 @@ const handleRegister = async () => {
       householdSize: household.value !== '' ? Number(household.value) : null,
     })
 
+    // IMPORTANT: Firebase auto-signs the user in after createUserWithEmailAndPassword.
+    // We must sign them out immediately — they need to verify their email before logging in.
+    // Without this, the router guard sees an authenticated user and redirects to /dashboard.
+    await auth.signOut()
+
     // Show success and prompt to check email
-    success.value = 'Account created! Please check your email to verify your account.'
+    success.value = 'Account created! Please check your email to verify your account before signing in.'
 
     // Clear form
     email.value = ''
@@ -139,9 +144,11 @@ const handleRegister = async () => {
       // If we have an auth user, it means createUserWithEmailAndPassword succeeded
       // but something later (sendEmailVerification or setDoc) failed.
       if (auth.currentUser) {
+        // Account exists but profile setup had issues — sign out so the router guard
+        // doesn't redirect to dashboard when we push to /login.
+        await auth.signOut()
         success.value = 'Account created! Please check your email to verify. (Note: Profile setup had a minor issue, but you can still log in.)'
         
-        // Redirect to login anyway since the account exists
         setTimeout(() => {
           router.push('/login')
         }, 4000)

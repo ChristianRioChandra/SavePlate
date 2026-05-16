@@ -102,9 +102,18 @@ const handleLogin = async () => {
       return
     }
 
-    const is2FAEnabled = localStorage.getItem('2fa_enabled') !== 'false'
+    // Fetch Firestore profile to get the authoritative 2FA setting.
+    // localStorage may be stale (e.g. after logout resets it to false),
+    // so we always trust Firestore as the source of truth.
+    try {
+      const profile = await getUserProfile(user.uid)
+      authStore.setTwoFactorEnabled(profile.two_factor_enabled)
+    } catch {
+      // If profile fetch fails, default to requiring OTP (fail-safe)
+      authStore.setTwoFactorEnabled(true)
+    }
 
-    if (is2FAEnabled) {
+    if (authStore.twoFactorEnabled) {
       // Generate OTP Random Number
       const otp = Math.floor(100000 + Math.random() * 900000).toString()
       const expiryTime = Date.now() + 180000

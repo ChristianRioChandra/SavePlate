@@ -187,13 +187,15 @@ service cloud.firestore {
           'two_factor_enabled',
           'privacy_settings',
           'inventory_ui_prefs',
-          'created_at'
+          'created_at',
+          'email_notifications_enabled'  // optional field added during registration
         ]) &&
         isNonEmptyString(data.name, 80) &&
         isValidEmail(data.email) &&
         (data.get('householdSize', null) == null || (data.householdSize is number && data.householdSize >= 1 && data.householdSize <= 50)) &&
         data.is_verified is bool &&
         data.two_factor_enabled is bool &&
+        (data.get('email_notifications_enabled', null) == null || data.email_notifications_enabled is bool) &&
         validPrivacySettings(data.privacy_settings) &&
         validInventoryUiPrefs(data.get('inventory_ui_prefs', null)) &&
         data.created_at is timestamp &&
@@ -359,15 +361,19 @@ service cloud.firestore {
     // ===============================================================
     match /users/{userId} {
       allow create: if isValidUserDoc(request.resource.data, userId) &&
-        request.resource.data.is_verified == false &&
-        request.resource.data.two_factor_enabled == false;
+        request.resource.data.is_verified == false;
 
       allow read: if isOwner(userId);
 
       allow update: if isOwner(userId) &&
-        isValidUserDoc(request.resource.data, userId) &&
+        // Email and creation timestamp are permanent — cannot be changed
         request.resource.data.email == resource.data.email &&
-        request.resource.data.created_at == resource.data.created_at;
+        request.resource.data.created_at == resource.data.created_at &&
+        // Users cannot self-verify their own email
+        request.resource.data.is_verified == resource.data.is_verified &&
+        // Mutable security fields must remain booleans
+        request.resource.data.two_factor_enabled is bool &&
+        (request.resource.data.get('email_notifications_enabled', true) is bool);
 
       allow delete: if false;
     }

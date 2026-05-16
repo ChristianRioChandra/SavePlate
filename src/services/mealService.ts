@@ -24,7 +24,7 @@ export interface MealPlan {
   user_id: string
   date: string // YYYY-MM-DD
   slots: MealSlot[]
-  ingredients?: { name: string, icon: string }[]
+  ingredients?: { name: string; icon: string }[]
   updated_at: FieldValue | Timestamp
 }
 
@@ -35,27 +35,28 @@ export async function saveMealPlan(
   uid: string,
   date: string,
   slots: MealSlot[],
-  ingredients: { name: string, icon: string }[] = []
+  ingredients: { name: string; icon: string }[] = [],
 ): Promise<void> {
   const docId = `${uid}_${date}`
   const docRef = doc(db, MEAL_PLANS_COL, docId)
 
-  await setDoc(docRef, {
-    user_id: uid,
-    date,
-    slots,
-    ingredients,
-    updated_at: serverTimestamp(),
-  }, { merge: true })
+  await setDoc(
+    docRef,
+    {
+      user_id: uid,
+      date,
+      slots,
+      ingredients,
+      updated_at: serverTimestamp(),
+    },
+    { merge: true },
+  )
 }
 
 /**
  * Retrieves a meal plan for a specific date and user.
  */
-export async function getMealPlan(
-  uid: string,
-  date: string
-): Promise<MealPlan | null> {
+export async function getMealPlan(uid: string, date: string): Promise<MealPlan | null> {
   const docId = `${uid}_${date}`
   const docRef = doc(db, MEAL_PLANS_COL, docId)
   const snap = await getDoc(docRef)
@@ -73,7 +74,7 @@ export async function getMealPlan(
 export async function getUserMealPlansForMonth(
   uid: string,
   year: number,
-  month: number
+  month: number,
 ): Promise<MealPlan[]> {
   // Start and end of month
   const start = `${year}-${String(month + 1).padStart(2, '0')}-01`
@@ -83,9 +84,9 @@ export async function getUserMealPlansForMonth(
     collection(db, MEAL_PLANS_COL),
     where('user_id', '==', uid),
     where('date', '>=', start),
-    where('date', '<=', end)
+    where('date', '<=', end),
   )
 
   const snap = await getDocs(q)
-  return snap.docs.map(d => d.data() as MealPlan)
+  return snap.docs.map((d) => d.data() as MealPlan)
 }

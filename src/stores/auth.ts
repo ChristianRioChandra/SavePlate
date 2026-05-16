@@ -8,7 +8,7 @@ let unsubscribeAuth: (() => void) | null = null
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const isLoading = ref(true)
-  
+
   let resolveAuth: (value: void | PromiseLike<void>) => void
   const isReady = new Promise<void>((resolve) => {
     resolveAuth = resolve
@@ -20,10 +20,14 @@ export const useAuthStore = defineStore('auth', () => {
   const loginTime = ref(Number(localStorage.getItem('session_start')) || null)
   const lastActivityTime = ref(Date.now())
 
-  const isLoggedIn = computed(() => user.value !== null && (otpVerified.value || !twoFactorEnabled.value))
+  const isLoggedIn = computed(
+    () => user.value !== null && (otpVerified.value || !twoFactorEnabled.value),
+  )
   const isAuthOnly = computed(() => user.value !== null)
   const is2FARequired = computed(() => twoFactorEnabled.value && !otpVerified.value)
-  const userName = computed(() => user.value?.displayName || user.value?.email?.split('@')[0] || 'User')
+  const userName = computed(
+    () => user.value?.displayName || user.value?.email?.split('@')[0] || 'User',
+  )
 
   const setOtpVerified = (verified: boolean) => {
     otpVerified.value = verified
@@ -90,6 +94,6 @@ export const useAuthStore = defineStore('auth', () => {
     lastActivityTime,
     resetActivity,
     userName,
-    logout
+    logout,
   }
 })

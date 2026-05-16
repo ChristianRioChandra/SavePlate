@@ -54,16 +54,21 @@
             <button
               type="button"
               class="toggle-switch"
-              :class="{ active: twoFactorEnabled }"
+              :class="{ active: twoFactorEnabled, saving: toggling2FA }"
               :aria-pressed="twoFactorEnabled"
+              :disabled="toggling2FA"
               @click="toggle2FA"
             >
               <span class="toggle-track">
                 <span class="toggle-handle"></span>
               </span>
-              <span class="toggle-text">{{ twoFactorEnabled ? 'On' : 'Off' }}</span>
+              <span class="toggle-text">
+                <span v-if="toggling2FA" class="mini-spinner"></span>
+                <template v-else>{{ twoFactorEnabled ? 'On' : 'Off' }}</template>
+              </span>
             </button>
           </article>
+          <p v-if="toggle2FAError" class="toggle-error">{{ toggle2FAError }}</p>
 
           <article class="setting-card">
             <div class="setting-copy">
@@ -106,7 +111,7 @@
               class="toggle-switch"
               :class="{ active: mailNotificationsEnabled }"
               :aria-pressed="mailNotificationsEnabled"
-              @click="toggleMailNotifications"
+              @click="mailNotificationsEnabled = !mailNotificationsEnabled"
             >
               <span class="toggle-track">
                 <span class="toggle-handle"></span>
@@ -201,7 +206,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
+import { auth } from '@/firebase'
+import { getUserProfile, updateUserProfile, updateTwoFactorStatus } from '@/services/authService'
+import { useAuthStore } from '@/stores/auth'
 import BaseSidebar from '@/components/BaseSidebar.vue'
 import type { NavItem } from '@/components/BaseSidebar.vue'
 
@@ -230,12 +238,10 @@ const visibilityOptions: Array<{ label: string; value: VisibilityOption }> = [
   { label: 'Private', value: 'private' },
 ]
 
-const twoFactorEnabled = ref(localStorage.getItem('2fa_enabled') !== 'false')
+const twoFactorEnabled = ref(false)
+const toggling2FA = ref(false)
+const toggle2FAError = ref('')
 const mailNotificationsEnabled = ref(true)
-
-watch(twoFactorEnabled, (newValue) => {
-  localStorage.setItem('2fa_enabled', newValue.toString())
-})
 const foodListingVisibility = ref<VisibilityOption>('public')
 const isEditingProfile = ref(false)
 
@@ -252,6 +258,11 @@ const draftAccount = reactive<AccountForm>({
 })
 
 onMounted(async () => {
+  // Wait for Firebase auth to fully initialize before reading currentUser.
+  // Without this, auth.currentUser is null and the profile fetch is skipped,
+  // leaving twoFactorEnabled stuck at false (toggle always shows "Off").
+  await authStore.isReady
+
   const user = auth.currentUser
   if (user) {
     try {
@@ -260,7 +271,6 @@ onMounted(async () => {
       account.email = profile.email
       account.householdSize = profile.householdSize || 1
       twoFactorEnabled.value = profile.two_factor_enabled
-      mailNotificationsEnabled.value = profile.email_notifications_enabled ?? true
       authStore.setTwoFactorEnabled(profile.two_factor_enabled)
 
       draftAccount.username = account.username
@@ -274,28 +284,28 @@ onMounted(async () => {
 
 const toggle2FA = async () => {
   const user = auth.currentUser
-  if (!user) return
+  if (!user || toggling2FA.value) return
 
+  toggle2FAError.value = ''
+  toggling2FA.value = true
   const newValue = !twoFactorEnabled.value
   try {
     await updateTwoFactorStatus(user.uid, newValue)
     twoFactorEnabled.value = newValue
     authStore.setTwoFactorEnabled(newValue)
-  } catch (err) {
-    console.error('Error updating 2FA status:', err)
-  }
-}
-
-const toggleMailNotifications = async () => {
-  const user = auth.currentUser
-  if (!user) return
-
-  const newValue = !mailNotificationsEnabled.value
-  try {
-    await updateEmailNotificationsStatus(user.uid, newValue)
-    mailNotificationsEnabled.value = newValue
-  } catch (err) {
-    console.error('Error updating mail notifications status:', err)
+  } catch (err: unknown) {
+    const code = (err as { code?: string })?.code ?? 'unknown'
+    const message = (err as { message?: string })?.message ?? String(err)
+    console.error('Error updating 2FA status:', code, message)
+    if (code === 'permission-denied') {
+      toggle2FAError.value = `Permission denied — Firestore rules are blocking this update. (${code})`
+    } else if (code === 'unavailable') {
+      toggle2FAError.value = 'Network unavailable. Check your connection and try again.'
+    } else {
+      toggle2FAError.value = `Save failed: ${code}. Check browser console for details.`
+    }
+  } finally {
+    toggling2FA.value = false
   }
 }
 
@@ -587,6 +597,38 @@ const saveProfile = async () => {
   font-weight: 700;
   min-width: 34px;
   text-align: left;
+  display: flex;
+  align-items: center;
+}
+
+.toggle-switch:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.toggle-switch.saving .toggle-track {
+  background: #94a3b8;
+}
+
+.mini-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(35, 65, 95, 0.25);
+  border-top-color: #23415f;
+  border-radius: 50%;
+  animation: spin-mini 0.7s linear infinite;
+}
+
+@keyframes spin-mini {
+  to { transform: rotate(360deg); }
+}
+
+.toggle-error {
+  margin: -10px 0 0 28px;
+  font-size: 0.83rem;
+  color: #dc2626;
+  font-weight: 500;
 }
 
 .select-shell {

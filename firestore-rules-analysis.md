@@ -1,86 +1,508 @@
-## Firestore Rules Analysis
+rules_version = '2';
+service cloud.firestore {
+match /databases/{database}/documents {
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: auth uid
+// Fields:
+// - name: string (required, 1..80)
+// - email: string (required, valid email, private)
+// - householdSize: number|null (optional, 1..50)
+// - is_verified: bool (required)
+// - two_factor_enabled: bool (required)
+// - privacy_settings: map (required)
+// - inventory_ui_prefs: map (optional)
+// - created_at: timestamp (required, immutable)
+//
+// Collection: food
+// Document ID: auto id
+// Fields:
+// - user_id: string (required, immutable, owner uid)
+// - food_type: string (required, 1..40)
+// - name: string (required, 1..80)
+// - quantity: number (required, > 0 and <= 1000000)
+// - unit: string (required, 1..20)
+// - expiry_date: string (required, YYYY-MM-DD)
+// - type: string (required enum: fridge|pantry|freezer|countertop)
+// - storage_location: string|null (optional, <= 80)
+// - notes: string|null (optional, <= 500)
+// - status: string (required enum)
+// - quantity_level: string (required enum)
+// - reserved_quantity: number (optional, >= 0)
+// - created_at: timestamp (required, immutable)
+// - category_id: string (optional, <= 80)
+//
+// Collection: mealPlans
+// Document ID: auto id
+// Fields:
+// - user_id: string (required, immutable, owner uid)
+// - date: string (required, YYYY-MM-DD)
+// - description: string|null (optional, <= 500)
+// - created_at: timestamp (required, immutable)
+//
+// Subcollection: mealPlans/{mealPlanId}/mealPlanItems
+// Fields:
+// - food_id: string (required)
+// - meal_plan_id: string (required, immutable, matches parent id)
+// - meal_date: string (required, YYYY-MM-DD)
+// - meal_type: string (required enum)
+// - reserved_quantity: number (required, > 0)
+// - recipe_name: string|null (optional, <= 120)
+//
+// Collection: notifications
+// Fields:
+// - user_id: string (required, immutable, owner uid)
+// - type: string (required enum)
+// - message: string (required, 1..300)
+// - is_read: bool (required)
+// - related_entity_id: string|null (optional, <= 120)
+// - created_at: timestamp (required, immutable)
+//
+// Collection: donationListings
+// Fields:
+// - user_id: string (required, immutable, owner uid)
+// - food_id: string (required)
+// - title: string (required, 1..120)
+// - description: string|null (optional, <= 500)
+// - quantity: number (required, > 0)
+// - expiry_date: string (required, YYYY-MM-DD)
+// - pickup_location: string (required, 1..120)
+// - availability_start: string (required, <= 40)
+// - availability_end: string (required, <= 40)
+// - status: string (required enum)
+// - created_at: timestamp (required, immutable)
+//
+// Collection: donationRequests
+// Fields:
+// - claimer_user_id: string (required, immutable, owner uid)
+// - listing_id: string (required, immutable)
+// - status: string (required enum)
+// - requested_at: timestamp (required, immutable)
+// - confirmed_at: timestamp|null (optional)
+//
+// Collection: categories
+// Fields:
+// - name: string (required, 1..60)
+//
+// ===============================================================
+// Helper Functions
+// ===============================================================
+function signedIn() {
+return request.auth != null;
+}
 
-Project: `saveplate-9b8c6`
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
 
-### Collections observed in code
+    function isNonEmptyString(value, maxLen) {
+      return value is string && value.size() > 0 && value.size() <= maxLen;
+    }
 
-- `users`
-  - doc id: Firebase Auth UID
-  - create: registration
-  - read/update: owner only
-  - fields:
-    - `name`
-    - `email`
-    - `householdSize`
-    - `is_verified`
-    - `two_factor_enabled`
-    - `privacy_settings`
-    - `inventory_ui_prefs`
-    - `created_at`
+    function isOptionalStringOrNull(value, maxLen) {
+      return value == null || (value is string && value.size() <= maxLen);
+    }
 
-- `food`
-  - create/read/update/delete by owner
-  - queries:
-    - `where('user_id', '==', uid).orderBy('expiry_date', 'asc')`
-    - `where('user_id', '==', uid).where('status', '==', ...).orderBy('expiry_date', 'asc')`
-    - `where('user_id', '==', uid).where('expiry_date', '>=', ...).where('expiry_date', '<=', ...).orderBy('expiry_date', 'asc')`
-    - `where('user_id', '==', uid).orderBy('created_at', 'asc')`
-  - fields:
-    - `user_id`
-    - `food_type`
-    - `name`
-    - `quantity`
-    - `unit`
-    - `expiry_date`
-    - `type`
-    - `storage_location`
-    - `notes`
-    - `status`
-    - `quantity_level`
-    - `reserved_quantity`
-    - `created_at`
-    - optional analytics field observed in queries: `category_id`
+    function isValidEmail(value) {
+      return value is string &&
+        value.size() <= 160 &&
+        value.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$');
+    }
 
-- `mealPlans`
-  - create/read/update/delete by owner
-  - queries:
-    - `where('user_id', '==', uid).orderBy('date', 'asc')`
-    - `where('user_id', '==', uid).where('date', '==', date)`
-  - subcollection: `mealPlans/{mealPlanId}/mealPlanItems`
-    - create/read/update/delete by parent owner
+    function isIsoDate(value) {
+      return value is string && value.matches('^\\d{4}-\\d{2}-\\d{2}$');
+    }
 
-- `notifications`
-  - create by app logic
-  - read/update by owner
-  - queries:
-    - `where('user_id', '==', uid).orderBy('created_at', 'desc')`
-    - `where('user_id', '==', uid).where('is_read', '==', false).orderBy('created_at', 'desc')`
+    function isValidStorageType(value) {
+      return value in ['fridge', 'pantry', 'freezer', 'countertop'];
+    }
 
-- `donationListings`
-  - create by owner
-  - public-in-app authenticated browsing of active listings
-  - owner can read/update own listings
-  - queries:
-    - `where('status', '==', 'active').orderBy('expiry_date', 'asc')`
-    - `where('user_id', '==', uid).orderBy('created_at', 'desc')`
+    function isValidFoodStatus(value) {
+      return value in ['available', 'used', 'donated', 'planned'];
+    }
 
-- `donationRequests`
-  - create by claiming user
-  - readable by claiming user and listing owner
-  - updates by listing owner to confirm/reject
-  - queries:
-    - `where('listing_id', '==', listingId).orderBy('requested_at', 'desc')`
-    - `where('claimer_user_id', '==', uid).orderBy('requested_at', 'desc')`
+    function isValidQuantityLevel(value) {
+      return value in ['low', 'medium', 'high', 'full'];
+    }
 
-- `categories`
-  - app-wide category list
-  - currently no owner field
-  - low-confidence design; safest rules are authenticated read and authenticated schema-limited writes if needed
+    function isValidMealType(value) {
+      return value in ['breakfast', 'lunch', 'dinner', 'snack'];
+    }
 
-### Main security assumptions
+    function isValidNotificationType(value) {
+      return value in [
+        'EXPIRY_ALERT',
+        'MOVE_TO_DONATION',
+        'DONATION_CLAIMED',
+        'DONATION_CONFIRMED',
+        'DONATION_POSTED',
+        'MEAL_REMINDER',
+        'ACCOUNT_ALERT'
+      ];
+    }
 
-- All app access is authenticated.
-- `users` contains private data and must remain owner-only.
-- `food`, `mealPlans`, `notifications` are owner-only.
-- `donationListings` may be readable by any authenticated user only when status is `active`; owners may still read their own non-active listings.
-- `donationRequests` are visible to the claimer and to the owner of the related listing.
+    function isValidListingStatus(value) {
+      return value in ['active', 'claimed', 'completed', 'cancelled'];
+    }
+
+    function isValidRequestStatus(value) {
+      return value in ['pending', 'confirmed', 'rejected'];
+    }
+
+    function validPrivacySettings(data) {
+      return data is map &&
+        data.keys().hasOnly(['listing_visibility', 'show_location']) &&
+        data.listing_visibility in ['public', 'private'] &&
+        data.show_location is bool;
+    }
+
+    function validInventoryUiPrefs(data) {
+      return data == null || (
+        data is map &&
+        data.keys().hasOnly(['layout', 'filter', 'sort', 'expanded_categories']) &&
+        data.layout in ['cards', 'compact'] &&
+        data.filter is string &&
+        data.filter.size() <= 40 &&
+        data.sort in ['name', 'expiry', 'category'] &&
+        data.expanded_categories is map &&
+        data.expanded_categories.keys().hasOnly(['all', 'fridge', 'pantry', 'freezer', 'countertop', 'expiry']) &&
+        data.expanded_categories.all is bool &&
+        data.expanded_categories.fridge is bool &&
+        data.expanded_categories.pantry is bool &&
+        data.expanded_categories.freezer is bool &&
+        data.expanded_categories.countertop is bool &&
+        data.expanded_categories.expiry is bool
+      );
+    }
+
+    function isValidUserDoc(data, userId) {
+      return data.keys().hasOnly([
+          'name',
+          'email',
+          'householdSize',
+          'is_verified',
+          'two_factor_enabled',
+          'privacy_settings',
+          'inventory_ui_prefs',
+          'created_at'
+        ]) &&
+        isNonEmptyString(data.name, 80) &&
+        isValidEmail(data.email) &&
+        (data.get('householdSize', null) == null || (data.householdSize is number && data.householdSize >= 1 && data.householdSize <= 50)) &&
+        data.is_verified is bool &&
+        data.two_factor_enabled is bool &&
+        validPrivacySettings(data.privacy_settings) &&
+        validInventoryUiPrefs(data.get('inventory_ui_prefs', null)) &&
+        data.created_at is timestamp &&
+        isOwner(userId);
+    }
+
+    function isValidFoodDoc(data) {
+      return data.keys().hasOnly([
+          'user_id',
+          'food_type',
+          'name',
+          'quantity',
+          'unit',
+          'expiry_date',
+          'type',
+          'storage_location',
+          'notes',
+          'status',
+          'quantity_level',
+          'reserved_quantity',
+          'created_at',
+          'category_id'
+        ]) &&
+        data.user_id is string &&
+        isOwner(data.user_id) &&
+        isNonEmptyString(data.food_type, 40) &&
+        isNonEmptyString(data.name, 80) &&
+        data.quantity is number &&
+        data.quantity > 0 &&
+        data.quantity <= 1000000 &&
+        isNonEmptyString(data.unit, 20) &&
+        isIsoDate(data.expiry_date) &&
+        isValidStorageType(data.type) &&
+        isOptionalStringOrNull(data.storage_location, 80) &&
+        isOptionalStringOrNull(data.notes, 500) &&
+        isValidFoodStatus(data.status) &&
+        isValidQuantityLevel(data.quantity_level) &&
+        (data.reserved_quantity == null || (data.reserved_quantity is number && data.reserved_quantity >= 0 && data.reserved_quantity <= 1000000)) &&
+        data.created_at is timestamp &&
+        isOptionalStringOrNull(data.category_id, 80);
+    }
+
+    function isValidMealPlanDoc(data, userId) {
+      return data.keys().hasOnly(['user_id', 'date', 'description', 'created_at']) &&
+        data.user_id == userId &&
+        isOwner(userId) &&
+        isIsoDate(data.date) &&
+        isOptionalStringOrNull(data.description, 500) &&
+        data.created_at is timestamp;
+    }
+
+    function isValidMealPlanItemDoc(data, mealPlanId) {
+      return data.keys().hasOnly([
+          'food_id',
+          'meal_plan_id',
+          'meal_date',
+          'meal_type',
+          'reserved_quantity',
+          'recipe_name'
+        ]) &&
+        isNonEmptyString(data.food_id, 120) &&
+        data.meal_plan_id == mealPlanId &&
+        isIsoDate(data.meal_date) &&
+        isValidMealType(data.meal_type) &&
+        data.reserved_quantity is number &&
+        data.reserved_quantity > 0 &&
+        data.reserved_quantity <= 1000000 &&
+        isOptionalStringOrNull(data.recipe_name, 120);
+    }
+
+    function isValidNotificationDoc(data) {
+      return data.keys().hasOnly([
+          'user_id',
+          'type',
+          'message',
+          'is_read',
+          'related_entity_id',
+          'created_at'
+        ]) &&
+        data.user_id is string &&
+        isOwner(data.user_id) &&
+        isValidNotificationType(data.type) &&
+        isNonEmptyString(data.message, 300) &&
+        data.is_read is bool &&
+        isOptionalStringOrNull(data.related_entity_id, 120) &&
+        data.created_at is timestamp;
+    }
+
+    function isValidListingDoc(data) {
+      return data.keys().hasOnly([
+          'user_id',
+          'food_id',
+          'title',
+          'description',
+          'quantity',
+          'expiry_date',
+          'pickup_location',
+          'availability_start',
+          'availability_end',
+          'status',
+          'created_at'
+        ]) &&
+        data.user_id is string &&
+        isOwner(data.user_id) &&
+        isNonEmptyString(data.food_id, 120) &&
+        isNonEmptyString(data.title, 120) &&
+        isOptionalStringOrNull(data.description, 500) &&
+        data.quantity is number &&
+        data.quantity > 0 &&
+        data.quantity <= 1000000 &&
+        isIsoDate(data.expiry_date) &&
+        isNonEmptyString(data.pickup_location, 120) &&
+        isNonEmptyString(data.availability_start, 40) &&
+        isNonEmptyString(data.availability_end, 40) &&
+        isValidListingStatus(data.status) &&
+        data.created_at is timestamp;
+    }
+
+    function isValidRequestDoc(data) {
+      return data.keys().hasOnly([
+          'claimer_user_id',
+          'listing_id',
+          'status',
+          'requested_at',
+          'confirmed_at'
+        ]) &&
+        data.claimer_user_id is string &&
+        isOwner(data.claimer_user_id) &&
+        isNonEmptyString(data.listing_id, 120) &&
+        isValidRequestStatus(data.status) &&
+        data.requested_at is timestamp &&
+        (data.confirmed_at == null || data.confirmed_at is timestamp);
+    }
+
+    function isValidCategoryDoc(data) {
+      return data.keys().hasOnly(['name']) &&
+        isNonEmptyString(data.name, 60);
+    }
+
+    function listingDoc(listingId) {
+      return get(/databases/$(database)/documents/donationListings/$(listingId));
+    }
+
+    function listingExists(listingId) {
+      return exists(/databases/$(database)/documents/donationListings/$(listingId));
+    }
+
+    function isListingOwner(listingId) {
+      return listingExists(listingId) &&
+        isOwner(listingDoc(listingId).data.user_id);
+    }
+
+    function canReadListing() {
+      return signedIn() &&
+        (
+          resource.data.status == 'active' ||
+          isOwner(resource.data.user_id)
+        );
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+    match /users/{userId} {
+      allow create: if isValidUserDoc(request.resource.data, userId) &&
+        request.resource.data.is_verified == false &&
+        request.resource.data.two_factor_enabled == false;
+
+      allow read: if isOwner(userId);
+
+      allow update: if isOwner(userId) &&
+        isValidUserDoc(request.resource.data, userId) &&
+        request.resource.data.email == resource.data.email &&
+        request.resource.data.created_at == resource.data.created_at;
+
+      allow delete: if false;
+    }
+
+    match /food/{foodId} {
+      allow create: if isValidFoodDoc(request.resource.data) &&
+        request.resource.data.status == 'available' &&
+        request.resource.data.quantity_level == 'full';
+
+      allow read: if signedIn() && isOwner(resource.data.user_id);
+
+      allow update: if signedIn() &&
+        isOwner(resource.data.user_id) &&
+        isValidFoodDoc(request.resource.data) &&
+        request.resource.data.user_id == resource.data.user_id &&
+        request.resource.data.created_at == resource.data.created_at;
+
+      allow delete: if signedIn() && isOwner(resource.data.user_id);
+    }
+
+    match /mealPlans/{mealPlanId} {
+      allow create: if isValidMealPlanDoc(request.resource.data, request.auth.uid);
+
+      allow read: if signedIn() && isOwner(resource.data.user_id);
+
+      allow update: if signedIn() &&
+        isOwner(resource.data.user_id) &&
+        isValidMealPlanDoc(request.resource.data, resource.data.user_id) &&
+        request.resource.data.user_id == resource.data.user_id &&
+        request.resource.data.created_at == resource.data.created_at;
+
+      allow delete: if signedIn() && isOwner(resource.data.user_id);
+
+      match /mealPlanItems/{itemId} {
+        allow create: if signedIn() &&
+          exists(/databases/$(database)/documents/mealPlans/$(mealPlanId)) &&
+          isOwner(get(/databases/$(database)/documents/mealPlans/$(mealPlanId)).data.user_id) &&
+          isValidMealPlanItemDoc(request.resource.data, mealPlanId);
+
+        allow read: if signedIn() &&
+          exists(/databases/$(database)/documents/mealPlans/$(mealPlanId)) &&
+          isOwner(get(/databases/$(database)/documents/mealPlans/$(mealPlanId)).data.user_id);
+
+        allow update: if signedIn() &&
+          exists(/databases/$(database)/documents/mealPlans/$(mealPlanId)) &&
+          isOwner(get(/databases/$(database)/documents/mealPlans/$(mealPlanId)).data.user_id) &&
+          isValidMealPlanItemDoc(request.resource.data, mealPlanId) &&
+          request.resource.data.meal_plan_id == resource.data.meal_plan_id;
+
+        allow delete: if signedIn() &&
+          exists(/databases/$(database)/documents/mealPlans/$(mealPlanId)) &&
+          isOwner(get(/databases/$(database)/documents/mealPlans/$(mealPlanId)).data.user_id);
+      }
+    }
+
+    match /notifications/{notificationId} {
+      allow create: if isValidNotificationDoc(request.resource.data);
+
+      allow read: if signedIn() && isOwner(resource.data.user_id);
+
+      allow update: if signedIn() &&
+        isOwner(resource.data.user_id) &&
+        isValidNotificationDoc(request.resource.data) &&
+        request.resource.data.user_id == resource.data.user_id &&
+        request.resource.data.type == resource.data.type &&
+        request.resource.data.message == resource.data.message &&
+        request.resource.data.related_entity_id == resource.data.related_entity_id &&
+        request.resource.data.created_at == resource.data.created_at;
+
+      allow delete: if false;
+    }
+
+    match /donationListings/{listingId} {
+      allow create: if isValidListingDoc(request.resource.data) &&
+        request.resource.data.status == 'active';
+
+      allow read: if canReadListing();
+
+      allow update: if signedIn() &&
+        isOwner(resource.data.user_id) &&
+        isValidListingDoc(request.resource.data) &&
+        request.resource.data.user_id == resource.data.user_id &&
+        request.resource.data.food_id == resource.data.food_id &&
+        request.resource.data.created_at == resource.data.created_at;
+
+      allow delete: if false;
+    }
+
+    match /donationRequests/{requestId} {
+      allow create: if signedIn() &&
+        isValidRequestDoc(request.resource.data) &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.confirmed_at == null &&
+        listingExists(request.resource.data.listing_id) &&
+        listingDoc(request.resource.data.listing_id).data.status == 'active' &&
+        listingDoc(request.resource.data.listing_id).data.user_id != request.auth.uid;
+
+      allow read: if signedIn() &&
+        (
+          isOwner(resource.data.claimer_user_id) ||
+          isListingOwner(resource.data.listing_id)
+        );
+
+      allow update: if signedIn() &&
+        isValidRequestDoc(request.resource.data) &&
+        request.resource.data.claimer_user_id == resource.data.claimer_user_id &&
+        request.resource.data.listing_id == resource.data.listing_id &&
+        request.resource.data.requested_at == resource.data.requested_at &&
+        isListingOwner(resource.data.listing_id) &&
+        (
+          (
+            resource.data.status == 'pending' &&
+            request.resource.data.status == 'confirmed' &&
+            request.resource.data.confirmed_at is timestamp
+          ) ||
+          (
+            resource.data.status == 'pending' &&
+            request.resource.data.status == 'rejected' &&
+            request.resource.data.confirmed_at == resource.data.confirmed_at
+          )
+        );
+
+      allow delete: if false;
+    }
+
+    match /categories/{categoryId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && isValidCategoryDoc(request.resource.data);
+      allow delete: if signedIn();
+      allow update: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+}
+}

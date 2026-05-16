@@ -66,16 +66,16 @@ onMounted(() => {
   timerInterval = window.setInterval(checkSession, 1000)
 
   // Add event listeners
-  activityEvents.forEach(event => {
+  activityEvents.forEach((event) => {
     window.addEventListener(event, handleUserActivity)
   })
 })
 
 onUnmounted(() => {
   if (timerInterval) clearInterval(timerInterval)
-  
+
   // Remove event listeners
-  activityEvents.forEach(event => {
+  activityEvents.forEach((event) => {
     window.removeEventListener(event, handleUserActivity)
   })
 })
@@ -98,7 +98,9 @@ const formattedTimeRemaining = computed(() => {
         <p>You have been inactive for a while. You will be logged out automatically in:</p>
         <div class="countdown">{{ formattedTimeRemaining }}</div>
         <div class="actions">
-          <button class="logout-btn" @click="handleLogout('Logged out manually.')">Logout Now</button>
+          <button class="logout-btn" @click="handleLogout('Logged out manually.')">
+            Logout Now
+          </button>
           <button class="stay-btn" @click="stayLoggedIn">Stay Logged In</button>
         </div>
       </div>
@@ -198,7 +200,9 @@ button {
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
 }
 
 .fade-enter-from,

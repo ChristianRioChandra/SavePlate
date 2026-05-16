@@ -75,7 +75,7 @@ export async function registerUser({
     email,
     householdSize,
     is_verified: false,
-    two_factor_enabled: false,
+    two_factor_enabled: true, // OTP required for all users by default
     email_notifications_enabled: true,
     privacy_settings: {
       listing_visibility: 'public',

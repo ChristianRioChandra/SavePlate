@@ -15,7 +15,7 @@ const timer = ref(180)
 let interval: ReturnType<typeof setInterval>
 
 // button validation
-const isOtpValid = computed(() => otp.value.every(d => d !== ''))
+const isOtpValid = computed(() => otp.value.every((d) => d !== ''))
 
 // timer
 const startTimer = () => {
@@ -73,7 +73,6 @@ const verifyOTP = () => {
   const savedOTP = localStorage.getItem('otp_code')
   const expiry = localStorage.getItem('otp_expiry')
 
-
   if (finalOTP.length !== 6) {
     error.value = 'OTP must be 6 digits!'
     return
@@ -93,7 +92,6 @@ const verifyOTP = () => {
     error.value = 'Wrong OTP!'
     return
   }
-
 
   localStorage.removeItem('otp_code')
   localStorage.removeItem('otp_expiry')
@@ -121,7 +119,6 @@ onUnmounted(() => {
 <template>
   <div class="auth-container">
     <div class="form-card">
-
       <img class="logo-image" :src="logoFull" alt="Logo" />
 
       <h2>Verify OTP</h2>
@@ -137,7 +134,11 @@ onUnmounted(() => {
           class="otp-input"
           @input="handleInput(index, $event)"
           @keydown="handleKeydown(index, $event)"
-          :ref="(el) => { inputs[index] = el as HTMLInputElement | null }"
+          :ref="
+            (el) => {
+              inputs[index] = el as HTMLInputElement | null
+            }
+          "
         />
       </div>
 
@@ -149,20 +150,9 @@ onUnmounted(() => {
       </p>
 
       <!-- RESEND -->
-      <p
-        class="resend"
-        :class="{ disabled: timer > 0 }"
-        @click="resendOTP"
-      >
-        Resend OTP
-      </p>
+      <p class="resend" :class="{ disabled: timer > 0 }" @click="resendOTP">Resend OTP</p>
 
-      <button
-        @click="verifyOTP"
-        :disabled="!isOtpValid"
-      >
-        Verify
-      </button>
+      <button @click="verifyOTP" :disabled="!isOtpValid">Verify</button>
     </div>
   </div>
 </template>
@@ -182,10 +172,10 @@ onUnmounted(() => {
   border-radius: 16px;
   width: 350px;
   text-align: center;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
 }
 
-.logo-image{
+.logo-image {
   width: 190px;
   margin-bottom: 15px;
 }
@@ -217,7 +207,7 @@ p {
 
 .otp-input:focus {
   border-color: #22c55e;
-  box-shadow: 0 0 5px rgba(34,197,94,0.5);
+  box-shadow: 0 0 5px rgba(34, 197, 94, 0.5);
 }
 
 .timer {
@@ -247,7 +237,7 @@ button {
 }
 
 button:disabled {
-  background: #E5E7EB;
+  background: #e5e7eb;
   cursor: not-allowed;
   opacity: 0.9;
 }
