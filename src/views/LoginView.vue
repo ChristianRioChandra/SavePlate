@@ -100,21 +100,28 @@ const handleLogin = async () => {
       return
     }
 
-    // Generate OTP Random Number
-    const otp = Math.floor(100000 + Math.random() * 900000).toString()
-    const expiryTime = Date.now() + 180000
+    const is2FAEnabled = localStorage.getItem('2fa_enabled') !== 'false'
 
-    localStorage.setItem('otp_code', otp)
-    localStorage.setItem('otp_expiry', expiryTime.toString())
-    localStorage.setItem('otp_email', userEmail)
+    if (is2FAEnabled) {
+      // Generate OTP Random Number
+      const otp = Math.floor(100000 + Math.random() * 900000).toString()
+      const expiryTime = Date.now() + 180000
 
-    try {
-      await sendOTPEmail(userEmail, otp)
-    } catch (err) {
-      console.error('Email error:', err)
+      localStorage.setItem('otp_code', otp)
+      localStorage.setItem('otp_expiry', expiryTime.toString())
+      localStorage.setItem('otp_email', userEmail)
+
+      try {
+        await sendOTPEmail(userEmail, otp)
+      } catch (err) {
+        console.error('Email error:', err)
+      }
+
+      router.push('/otp')
+    } else {
+      localStorage.setItem('isLogin', 'true')
+      router.push('/dashboard')
     }
-
-    router.push('/otp')
   } catch (err: unknown) {
     if (isFirebaseError(err)) {
       switch (err.code) {

@@ -94,14 +94,24 @@ router.beforeEach((to, from, next) => {
 // to:
 router.beforeEach((to) => {
   const isLogin = localStorage.getItem('isLogin')
-  if (
-    !isLogin &&
-    to.name !== 'login' &&
-    to.name !== 'register' &&
-    to.name !== 'otp' &&
-    to.path !== '/'
-  ) {
+  const hasOTP = localStorage.getItem('otp_code')
+
+  // route public
+  const publicPages = ['landing', 'login', 'register']
+
+  if (!isLogin && !publicPages.includes(to.name as string)) {
     return '/login'
+  }
+
+  if (to.name === 'otp' && !hasOTP) {
+    return '/login'
+  }
+
+  if (
+    isLogin &&
+    (to.name === 'login' || to.name === 'register')
+  ) {
+    return '/dashboard'
   }
 })
 export default router
