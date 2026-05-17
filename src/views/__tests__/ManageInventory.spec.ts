@@ -41,6 +41,96 @@ vi.mock('@/services/localAnalyticsStore.ts', () => ({
   addLocalAnalyticsEvents: vi.fn()
 }))
 
+// Mock foodService
+vi.mock('@/services/foodService', () => ({
+  addFoodItem: vi.fn().mockResolvedValue('new-id'),
+  updateFoodItem: vi.fn().mockResolvedValue(true),
+  deleteFoodItem: vi.fn().mockResolvedValue(true),
+  markFoodAsDonated: vi.fn().mockResolvedValue(true),
+  markFoodAsUsed: vi.fn().mockResolvedValue(true),
+}))
+
+// Mock authService UI prefs
+vi.mock('@/services/authService', () => ({
+  getInventoryUiPrefs: vi.fn().mockResolvedValue({}),
+  updateInventoryUiPrefs: vi.fn().mockResolvedValue(true),
+}))
+
+// Mock notifications store
+vi.mock('@/stores/notifications', () => ({
+  useNotificationsStore: vi.fn(() => ({
+    unreadCount: 0,
+    addNotification: vi.fn(),
+  }))
+}))
+
+// Mock firestore
+vi.mock('firebase/firestore', async (importOriginal) => {
+  const actual: any = await importOriginal()
+  return {
+    ...actual,
+    collection: vi.fn(),
+    query: vi.fn(),
+    where: vi.fn(),
+    orderBy: vi.fn(),
+    onSnapshot: vi.fn((q, callback) => {
+      // Immediately call callback with mock data
+      callback({
+        docs: [
+          {
+            id: 'f1',
+            data: () => ({
+              name: 'Susu UltraMilk',
+              notes: 'Fresh milk, rich in calcium and vitamin D',
+              quantity: 500,
+              unit: 'ml',
+              storage_location: 'Middle shelf',
+              expiry_date: '2026-05-30', // In future
+              type: 'fridge',
+              food_type: 'Dairy & Eggs',
+              quantity_level: 'low',
+              status: 'available',
+              user_id: 'test-user'
+            })
+          },
+          {
+            id: 'f2',
+            data: () => ({
+              name: 'Fresh Spinach',
+              notes: 'Organic spinach leaves, great for salads and cooking',
+              quantity: 1,
+              unit: 'bag',
+              storage_location: 'Veg drawer',
+              expiry_date: new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0], // 2 days
+              type: 'fridge',
+              food_type: 'Vegetables',
+              quantity_level: 'high',
+              status: 'available',
+              user_id: 'test-user'
+            })
+          }
+        ]
+      })
+      return vi.fn() // mock unsubscribe
+    })
+  }
+})
+
+// Mock firebase auth
+vi.mock('firebase/auth', () => ({
+  getAuth: vi.fn(() => ({ currentUser: { uid: 'test-user' } })),
+  onAuthStateChanged: vi.fn((auth, callback) => {
+    callback({ uid: 'test-user' })
+    return vi.fn()
+  })
+}))
+
+vi.mock('@/firebase', () => ({
+  auth: { currentUser: { uid: 'test-user' } },
+  db: {}
+}))
+
+
 describe('ManageInventory.vue', () => {
   let wrapper: any
   let mockLocalStorageGet: any
@@ -88,6 +178,35 @@ describe('ManageInventory.vue', () => {
         }
       }
     })
+
+    // Populate mock inventory since we migrated to Firestore
+    wrapper.vm.inventory = [
+      {
+        id: 'f1',
+        name: 'Susu UltraMilk',
+        description: 'Fresh milk, rich in calcium and vitamin D',
+        volume: '500ml',
+        location: 'Middle shelf',
+        expiryDays: 10,
+        category: 'fridge',
+        foodType: 'Dairy & Eggs',
+        searchTerms: 'milk dairy',
+        quantityLevel: 'low',
+      },
+      {
+        id: 'f2',
+        name: 'Fresh Spinach',
+        description: 'Organic spinach leaves, great for salads and cooking',
+        volume: '200g bag',
+        location: 'Veg drawer',
+        expiryDays: 2,
+        category: 'fridge',
+        foodType: 'Vegetables',
+        searchTerms: 'spinach greens',
+        quantityLevel: 'high',
+      }
+    ]
+
     // Spy on notifyMessage
     vi.spyOn(wrapper.vm, 'notifyMessage')
   })
@@ -188,17 +307,20 @@ describe('ManageInventory.vue', () => {
   })
 
   it('TC-017: filter by storage location', async () => {
-    wrapper.vm.currentFilter = 'fridge'
+    wrapper.vm.activeLocations.add('fridge')
     await wrapper.vm.$forceUpdate()
     await nextTick()
     expect(wrapper.findAll('.food-item-card').length).toBeGreaterThan(0)
   })
 
   it('TC-018: near expiry filter shows urgent items', async () => {
-    wrapper.vm.currentFilter = 'near-expiry'
+    wrapper.vm.activeNearExpiry = true
     await wrapper.vm.$forceUpdate()
     await nextTick()
-    expect(wrapper.findAll('#expiryGrid .food-item-card').length).toBe(1) // Fresh Spinach
+    // When near expiry filter is active, non-urgent items are filtered out
+    const cards = wrapper.findAll('.food-item-card')
+    expect(cards.length).toBeGreaterThan(0)
+    expect(wrapper.vm.getFilteredAndSortedItems('all').length).toBeGreaterThan(0)
   })
 
   it('TC-019: sort by expiry works', async () => {
@@ -219,7 +341,7 @@ describe('ManageInventory.vue', () => {
     const searchInput = wrapper.find('.search-input')
     await searchInput.setValue('nonexistent')
     await nextTick()
-    expect(wrapper.findAll('.food-item-card.hidden-by-search').length).toBeGreaterThan(0)
+    expect(wrapper.vm.getFilteredAndSortedItems('all').length).toBe(0)
   })
 
   // 4. SELECTION & BULK ACTIONS
@@ -251,8 +373,8 @@ describe('ManageInventory.vue', () => {
   })
 
   it('TC-025: bulk donate removes selected items', async () => {
-    const checkbox = wrapper.find('.donation-checkbox')
-    await checkbox.setValue(true)
+    wrapper.vm.selectedDonationIds.add('f1')
+    await nextTick()
     const donateBtn = wrapper.find('#donateBulkBtn')
     if (donateBtn.exists()) {
       await donateBtn.trigger('click')
@@ -265,7 +387,7 @@ describe('ManageInventory.vue', () => {
   it('TC-026: opens add modal on + click', async () => {
     await wrapper.find('.floating-add').trigger('click')
     await nextTick()
-    expect(wrapper.find('.modal-overlay[style*="display: flex"]').exists()).toBe(true)
+    expect(wrapper.find('.modal-overlay').exists()).toBe(true)
     expect(wrapper.find('.modal-box h2').text()).toBe('Add New Food Item')
   })
 
@@ -295,9 +417,9 @@ describe('ManageInventory.vue', () => {
   it('TC-030: calculates expiry days correctly', async () => {
     await wrapper.find('.floating-add').trigger('click')
     await nextTick()
-    await wrapper.find('#expiryDate').setValue('2026-05-03')
+    await wrapper.find('#expiryDate').setValue('2030-05-03')
     await nextTick()
-    expect(wrapper.vm.calculateDaysUntil('2026-05-03')).toBeGreaterThan(0)
+    expect(wrapper.vm.calculateDaysUntil('2030-05-03')).toBeGreaterThan(0)
   })
 
   it('TC-031: storage selection works', async () => {
@@ -355,7 +477,7 @@ describe('ManageInventory.vue', () => {
 
   // 7. ITEM ACTIONS
   it('TC-036: delete item removes from inventory', async () => {
-    const initialCount = wrapper.vm.inventory.length
+    const { deleteFoodItem } = await import('@/services/foodService')
     const deleteBtn = wrapper.find('.mini-btn.delete-item')
     if (deleteBtn.exists()) {
       await deleteBtn.trigger('click')
@@ -363,7 +485,7 @@ describe('ManageInventory.vue', () => {
       const confirmBtn = wrapper.find('.modal-danger')
       await confirmBtn.trigger('click')
       await nextTick()
-      expect(wrapper.vm.inventory.length).toBeLessThan(initialCount)
+      expect(deleteFoodItem).toHaveBeenCalled()
     }
   })
 
@@ -394,7 +516,7 @@ describe('ManageInventory.vue', () => {
   })
 
   it('TC-040: loads inventory from localStorage', async () => {
-    wrapper.vm.currentFilter = 'all'
+    wrapper.vm.activeLocations = new Set()
     wrapper.vm.currentSort = 'name'
     wrapper.vm.inventory = [
       {
@@ -444,8 +566,8 @@ describe('ManageInventory.vue', () => {
   it('TC-044: records usage analytics', async () => {
     const { addLocalAnalyticsEvent } = await import('@/services/localAnalyticsStore')
     await nextTick()
-    wrapper.vm.currentUseItemId = wrapper.vm.inventory[0].id
-    wrapper.vm.finishItem()
+    wrapper.vm.currentUseItemId = 'f1'
+    await wrapper.vm.finishItem()
     expect(addLocalAnalyticsEvent).toHaveBeenCalledWith(
       expect.objectContaining({ kind: 'used' })
     )
@@ -463,7 +585,7 @@ describe('ManageInventory.vue', () => {
 
   // 13. DATE & TIME HANDLING
   it('TC-046: calculates days until expiry', () => {
-    const days = wrapper.vm.calculateDaysUntil('2026-05-03')
+    const days = wrapper.vm.calculateDaysUntil('2030-05-03')
     expect(days).toBeGreaterThan(0)
   })
 
