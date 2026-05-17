@@ -176,7 +176,7 @@ async function deleteSelected() {
   max-width: 1760px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: clamp(220px, 16vw, 256px) minmax(0, 1fr);
+  grid-template-columns: 280px minmax(0, 1fr);
   gap: clamp(18px, 2vw, 28px);
   align-items: start;
 }

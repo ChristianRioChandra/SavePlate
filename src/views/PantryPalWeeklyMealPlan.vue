@@ -735,7 +735,7 @@ const mealSearch = ref('')
   max-width: 1760px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: clamp(220px, 16vw, 256px) minmax(0, 1fr) clamp(232px, 18vw, 276px);
+  grid-template-columns: 280px minmax(0, 1fr) clamp(232px, 18vw, 276px);
   gap: clamp(18px, 2vw, 28px);
   align-items: start;
 }

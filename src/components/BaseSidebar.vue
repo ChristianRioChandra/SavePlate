@@ -78,10 +78,11 @@ const navigateTo = (routePath: string) => router.push(routePath)
   background: white;
   border-radius: 34px;
   box-shadow: 0 18px 45px rgba(31, 47, 62, 0.06);
-  padding: 34px 24px;
+  padding: 40px 32px;
   position: sticky;
   top: 24px;
   height: calc(100vh - 48px);
+  width: 280px;
   display: flex;
   flex-direction: column;
 }
@@ -89,8 +90,8 @@ const navigateTo = (routePath: string) => router.push(routePath)
 .logo-area {
   display: flex;
   align-items: center;
-  margin-bottom: 44px;
-  padding-left: 6px;
+  justify-content: center;
+  margin-bottom: 56px;
   cursor: pointer;
   user-select: none;
   transition: opacity 0.2s;
@@ -118,12 +119,12 @@ const navigateTo = (routePath: string) => router.push(routePath)
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 18px;
-  margin: 8px 0;
-  border-radius: 22px;
+  gap: 16px;
+  padding: 16px 20px;
+  margin: 12px 0;
+  border-radius: 18px;
   font-weight: 500;
-  font-size: 0.98rem;
+  font-size: 1.05rem;
   color: #17304f;
   cursor: pointer;
   transition: 0.2s;
