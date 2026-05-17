@@ -60,7 +60,7 @@ const handleLogout = async () => {
   flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 28px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
 .page-title h2 {

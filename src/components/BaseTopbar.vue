@@ -15,7 +15,7 @@
               class="notif-popup-item"
               :class="{ unread: !notif.is_read }"
             >
-              <div class="notif-item-icon">{{ notif.icon }}</div>
+              <div class="notif-item-icon"><i class="bi" :class="notif.icon"></i></div>
               <div class="notif-item-body">
                 <div class="notif-item-title">{{ notif.title }}</div>
                 <div class="notif-item-detail">{{ notif.message }}</div>
@@ -130,7 +130,7 @@ const handleLogout = async () => {
   flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 28px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
 .page-title h2 {
