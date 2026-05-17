@@ -399,6 +399,7 @@ const saveProfile = async () => {
     account.username = draftAccount.username
     account.householdSize = draftAccount.householdSize
     isEditingProfile.value = false
+    authStore.updateDisplayName(draftAccount.username)
   } catch (err) {
     console.error('Error saving profile:', err)
   }

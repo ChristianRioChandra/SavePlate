@@ -410,7 +410,7 @@ export default {
   --sage: #7a9e7e;
   --deep-sage: #4a7050;
   --forest: #243f2d;
-  --clay: #c4724a;
+  --clay: #2c7a4d;
   --amber: #d4a847;
   --ink: #16221a;
   --slate: #425e6f;
@@ -471,6 +471,11 @@ nav.open .btn-outline:hover {
   -webkit-text-fill-color: #fff;
 }
 
+nav.scrolled .nav-links a,
+nav.scrolled .user-greeting {
+  text-shadow: none !important;
+}
+
 .nav-logo {
   align-items: center;
   display: flex;
@@ -515,6 +520,7 @@ nav.open .btn-outline:hover {
   position: relative;
   text-decoration: none;
   transition: color 0.2s ease;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
 .nav-links a::after {
@@ -550,6 +556,7 @@ nav.open .btn-outline:hover {
   font-size: 0.9rem;
   font-weight: 600;
   white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
 .logout-btn {
@@ -603,13 +610,16 @@ nav.open .btn-outline:hover {
 .btn-primary {
   background: var(--clay);
   border: 1.5px solid var(--clay);
-  box-shadow: 0 12px 24px rgba(196, 114, 74, 0.28);
+  box-shadow: 0 12px 24px rgba(44, 122, 77, 0.24);
   color: #fff;
+  -webkit-text-fill-color: #fff;
 }
 
 .btn-primary:hover {
-  background: #ac5f3e;
-  border-color: #ac5f3e;
+  background: #1e5c38;
+  border-color: #1e5c38;
+  color: #fff;
+  -webkit-text-fill-color: #fff;
   transform: translateY(-2px);
 }
 
@@ -617,6 +627,12 @@ nav.open .btn-outline:hover {
 .hero {
   align-items: center;
   background:
+    linear-gradient(
+      180deg,
+      rgba(11, 21, 14, 0.8) 0%,
+      rgba(11, 21, 14, 0.15) 120px,
+      transparent 220px
+    ),
     linear-gradient(
       90deg,
       rgba(11, 21, 14, 0.76),
@@ -911,7 +927,7 @@ nav.open .btn-outline:hover {
 
 .about-card:hover,
 .feature-card:hover {
-  border-color: rgba(196, 114, 74, 0.42);
+  border-color: rgba(44, 122, 77, 0.42);
   box-shadow: 0 24px 60px rgba(36, 63, 45, 0.11);
   transform: translateY(-6px);
 }

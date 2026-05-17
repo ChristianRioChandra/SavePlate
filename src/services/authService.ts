@@ -5,6 +5,7 @@ import {
   signOut,
   sendEmailVerification,
   updatePassword,
+  updateProfile,
   multiFactor,
   PhoneAuthProvider,
   PhoneMultiFactorGenerator,
@@ -136,6 +137,10 @@ export async function updateUserProfile(
   { name, householdSize }: UpdateProfilePayload,
 ): Promise<void> {
   await updateDoc(doc(db, 'users', uid), { name, householdSize })
+  const user = auth.currentUser
+  if (user) {
+    await updateProfile(user, { displayName: name })
+  }
 }
 
 // ─── Inventory UI Preferences ────────────────────────────────────────────────
