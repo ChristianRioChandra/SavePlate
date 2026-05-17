@@ -58,6 +58,7 @@ export async function createNotification(
     type,
     message,
     is_read: false,
+    email_sent: false,
     related_entity_id: relatedEntityId,
     created_at: serverTimestamp(),
   })

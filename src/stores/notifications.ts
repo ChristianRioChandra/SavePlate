@@ -36,13 +36,13 @@ export interface AppNotification {
 
 // ─── Icon map (type → emoji) ──────────────────────────────────────────────────
 const TYPE_ICONS: Record<string, string> = {
-  EXPIRY_ALERT:        '⏰',
-  MOVE_TO_DONATION:    '🎁',
-  DONATION_CLAIMED:    '👤',
-  DONATION_CONFIRMED:  '✅',
-  DONATION_POSTED:     '📢',
-  MEAL_REMINDER:       '🍽️',
-  ACCOUNT_ALERT:       '🔔',
+  EXPIRY_ALERT:        'bi-alarm',
+  MOVE_TO_DONATION:    'bi-gift',
+  DONATION_CLAIMED:    'bi-person',
+  DONATION_CONFIRMED:  'bi-check-circle',
+  DONATION_POSTED:     'bi-megaphone',
+  MEAL_REMINDER:       'bi-cup-hot',
+  ACCOUNT_ALERT:       'bi-bell',
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -90,7 +90,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
       const { date, time } = formatTimestamp(n.created_at)
       return {
         ...n,
-        icon: TYPE_ICONS[n.type] ?? '🔔',
+        icon: TYPE_ICONS[n.type] ?? 'bi-bell',
         title: n.message,
         typeLabel: TYPE_LABELS[n.type] ?? n.type,
         detail: n.message,

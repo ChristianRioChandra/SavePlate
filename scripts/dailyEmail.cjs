@@ -1,36 +1,17 @@
 /* eslint-disable */
-// scripts/dailyEmail.js
-// ─────────────────────────────────────────────────────────────────────────────
-// PantryPal – Daily Expiry Notification Script
-//
-// Usage (from the /scripts folder):
-//   node dailyEmail.js
-//
-// Required environment variables (read from ../.env via dotenv):
-//   GMAIL_USER                       – sender Gmail address
-//   GMAIL_APP_PASSWORD               – 16-char Google App Password
-//   FIREBASE_SERVICE_ACCOUNT_PATH    – relative path to service-account JSON
-//                                      (default: ../firebaseServiceAccount.json)
-//
-// What it does:
-//   1. Connects to Firestore using Firebase Admin SDK (service-account key).
-//   2. Queries the 'food' collection for items expiring within the next 3 days
-//      that are still 'available' (not used / donated / planned).
-//   3. Groups those items by the owning user_id.
-//   4. Fetches each user's email + name from the 'users' collection.
-//   5. Sends a nicely formatted Gmail alert via nodemailer (SMTP / TLS).
-// ─────────────────────────────────────────────────────────────────────────────
 
 'use strict'
 
 // ── 0. Bootstrap ─────────────────────────────────────────────────────────────
-// Load .env from the project root (one level above /scripts)
 const path = require('path')
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
 
 const fs = require('fs')
 const nodemailer = require('nodemailer')
 const admin = require('firebase-admin')
+
+// ── Logo URL ──────────────────────────────────────────────────────────────────
+const LOGO_URL = 'https://pantrypal-bit216.netlify.app/logo-fullwhite.png'
 
 // ── 1. Validate environment variables ────────────────────────────────────────
 const GMAIL_USER = process.env.GMAIL_USER
@@ -80,8 +61,6 @@ const transporter = nodemailer.createTransport({
 
 /**
  * Format an ISO date string (e.g. '2026-05-19') to a human-readable form.
- * @param {string} isoDate
- * @returns {string}
  */
 function formatDate(isoDate) {
   if (!isoDate) return 'unknown date'
@@ -96,8 +75,6 @@ function formatDate(isoDate) {
 
 /**
  * Calculate how many days until a given ISO date.
- * @param {string} isoDate
- * @returns {number}
  */
 function daysUntil(isoDate) {
   const today = new Date()
@@ -109,9 +86,6 @@ function daysUntil(isoDate) {
 
 /**
  * Build a plain-text email body for one user's expiring items.
- * @param {string} displayName
- * @param {Array<{name: string, expiry_date: string, quantity: number, unit: string}>} items
- * @returns {string}
  */
 function buildEmailText(displayName, items) {
   const greeting = displayName ? `Hi ${displayName},` : 'Hi there,'
@@ -125,25 +99,22 @@ function buildEmailText(displayName, items) {
 
   return `${greeting}
 
-🥫 PantryPal has detected ${items.length} food item${items.length > 1 ? 's' : ''} in your pantry that ${items.length > 1 ? 'are' : 'is'} about to expire:
+PantryPal has detected ${items.length} food item${items.length > 1 ? 's' : ''} in your pantry that ${items.length > 1 ? 'are' : 'is'} about to expire:
 
 ${itemLines}
 
 Please consider using, sharing, or donating these items before they go to waste.
 You can log in to PantryPal to manage your inventory at any time.
 
-Stay fresh! 🌿
+Stay fresh!
 The PantryPal Team
 `
 }
 
 /**
  * Build an HTML email body for one user's expiring items.
- * @param {string} displayName
- * @param {Array<{name: string, expiry_date: string, quantity: number, unit: string}>} items
- * @returns {string}
  */
-function buildEmailHtml(displayName, items) {
+function buildEmailHtml(displayName, items, logoUrl) {
   const greeting = displayName ? `Hi <strong>${displayName}</strong>,` : 'Hi there,'
   const itemRows = items
     .map((item) => {
@@ -177,7 +148,7 @@ function buildEmailHtml(displayName, items) {
         <!-- Header -->
         <tr>
           <td style="background:linear-gradient(135deg,#16a34a 0%,#15803d 100%);padding:32px 40px;text-align:center;">
-            <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.5px;">🥫 PantryPal</h1>
+            <img src="${logoUrl}" alt="PantryPal" style="display:block;margin:0 auto;height:65px;width:auto;" />
             <p style="margin:8px 0 0;color:#bbf7d0;font-size:14px;">Food Expiry Notification</p>
           </td>
         </tr>
@@ -236,12 +207,11 @@ function buildEmailHtml(displayName, items) {
 
 // ── 5. Main routine ───────────────────────────────────────────────────────────
 ;(async () => {
-  console.log('🚀 PantryPal – Daily Expiry Email Job starting…\n')
+  console.log('✅ PantryPal – Daily Expiry Email Job starting…\n')
 
   try {
-    // ------------------------------------------------------------------
-    // 5.1  Calculate the date window: today → today + 3 days (ISO strings)
-    // ------------------------------------------------------------------
+
+    // Calculate the date window: today → today + 3 days (ISO strings)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const future = new Date(today)
@@ -251,12 +221,12 @@ function buildEmailHtml(displayName, items) {
     const todayISO = today.toISOString().split('T')[0]   // 'YYYY-MM-DD'
     const futureISO = future.toISOString().split('T')[0]
 
-    console.log(`📅  Checking for items expiring between ${todayISO} and ${futureISO}…`)
+    console.log(`✅  Checking for items expiring between ${todayISO} and ${futureISO}…`)
 
-    // ------------------------------------------------------------------
-    // 5.2  Query the 'food' collection
+
+    // Query the 'food' collection
     //      Matching documents: status=available AND expiry_date in [today, future]
-    // ------------------------------------------------------------------
+
     const foodSnap = await db
       .collection('food')
       .where('status', '==', 'available')
@@ -270,11 +240,11 @@ function buildEmailHtml(displayName, items) {
       process.exit(0)
     }
 
-    console.log(`🔍  Found ${foodSnap.size} expiring item(s) across all users.\n`)
+    console.log(`   Found ${foodSnap.size} expiring item(s) across all users.\n`)
 
-    // ------------------------------------------------------------------
-    // 5.3  Group items by user_id
-    // ------------------------------------------------------------------
+
+    // Group items by user_id
+
     /** @type {Record<string, Array<admin.firestore.DocumentData>>} */
     const itemsByUser = {}
     foodSnap.forEach((docSnap) => {
@@ -291,9 +261,8 @@ function buildEmailHtml(displayName, items) {
     const uniqueUsers = Object.keys(itemsByUser)
     console.log(`👥  Sending notifications to ${uniqueUsers.length} user(s)…\n`)
 
-    // ------------------------------------------------------------------
-    // 5.4  For each user: fetch profile, build email, send
-    // ------------------------------------------------------------------
+
+    // For each user: fetch profile, build email, send
     const results = await Promise.allSettled(
       uniqueUsers.map(async (uid) => {
         // Fetch user profile
@@ -310,21 +279,26 @@ function buildEmailHtml(displayName, items) {
         }
 
         const items = itemsByUser[uid]
+
+        if (user.email_notifications_enabled === false) {
+          console.log(`  🚫  Skipped email for ${email} (Notifications disabled)`)
+          return { uid, email, count: items.length, skipped: true }
+        }
         const subject =
           items.length === 1
             ? `⚠️ "${items[0].name}" is expiring soon – PantryPal`
             : `⚠️ ${items.length} items in your pantry are expiring soon – PantryPal`
 
-        // --- Send Email ---
+        //  Send Email
         await transporter.sendMail({
           from: `"PantryPal Alerts" <${GMAIL_USER}>`,
           to: email,
           subject,
           text: buildEmailText(name, items),
-          html: buildEmailHtml(name, items),
+          html: buildEmailHtml(name, items, LOGO_URL),
         })
 
-        // --- Create In-App Notification ---
+        // Create In-App Notification
         const notifMessage = items.length === 1
           ? `"${items[0].name}" is about to expire. Use or donate it soon!`
           : `You have ${items.length} items about to expire soon. Check your inventory!`
@@ -338,28 +312,32 @@ function buildEmailHtml(displayName, items) {
           created_at: admin.firestore.FieldValue.serverTimestamp(),
         })
 
-        console.log(`  ✉️   Sent to ${email} + In-app notification created (${items.length} item${items.length > 1 ? 's' : ''})`)
+        console.log(`  ✅   Sent to ${email} + In-app notification created (${items.length} item${items.length > 1 ? 's' : ''})`)
         return { uid, email, count: items.length }
       })
     )
 
-    // ------------------------------------------------------------------
-    // 5.5  Print summary
-    // ------------------------------------------------------------------
+
+    // Print summary
     console.log('\n─────────────────────────────')
     let successCount = 0
+    let skippedCount = 0
     let failCount = 0
     results.forEach((result) => {
       if (result.status === 'fulfilled') {
-        successCount++
+        if (result.value.skipped) {
+          skippedCount++
+        } else {
+          successCount++
+        }
       } else {
         failCount++
         console.error(`  ❌  Failed: ${result.reason?.message ?? result.reason}`)
       }
     })
-    console.log(`✅  Done. ${successCount} email(s) sent, ${failCount} failed.`)
+    console.log(`✅  Done. ${successCount} email(s) sent, ${skippedCount} skipped, ${failCount} failed.`)
   } catch (err) {
-    console.error('🚨  Unexpected error:', err)
+    console.error('❌  Unexpected error:', err)
     process.exit(1)
   }
 })()

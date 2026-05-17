@@ -273,7 +273,8 @@ service cloud.firestore {
           'message',
           'is_read',
           'related_entity_id',
-          'created_at'
+          'created_at',
+          'email_sent'
         ]) &&
         data.user_id is string &&
         isOwner(data.user_id) &&
@@ -281,6 +282,7 @@ service cloud.firestore {
         isNonEmptyString(data.message, 300) &&
         data.is_read is bool &&
         isOptionalStringOrNull(data.related_entity_id, 120) &&
+        (data.get('email_sent', null) == null || data.email_sent is bool) &&
         data.created_at is timestamp;
     }
 

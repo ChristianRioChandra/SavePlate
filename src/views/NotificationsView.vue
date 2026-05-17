@@ -53,7 +53,7 @@
             />
 
             <!-- Icon -->
-            <div class="notif-icon">{{ notif.icon }}</div>
+            <div class="notif-icon"><i class="bi" :class="notif.icon"></i></div>
 
             <!-- Body -->
             <div class="notif-body">
