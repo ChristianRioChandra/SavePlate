@@ -109,16 +109,21 @@
             <button
               type="button"
               class="toggle-switch"
-              :class="{ active: mailNotificationsEnabled }"
+              :class="{ active: mailNotificationsEnabled, saving: togglingMail }"
               :aria-pressed="mailNotificationsEnabled"
-              @click="mailNotificationsEnabled = !mailNotificationsEnabled"
+              :disabled="togglingMail"
+              @click="toggleMailNotifications"
             >
               <span class="toggle-track">
                 <span class="toggle-handle"></span>
               </span>
-              <span class="toggle-text">{{ mailNotificationsEnabled ? 'On' : 'Off' }}</span>
+              <span class="toggle-text">
+                <span v-if="togglingMail" class="mini-spinner"></span>
+                <template v-else>{{ mailNotificationsEnabled ? 'On' : 'Off' }}</template>
+              </span>
             </button>
           </article>
+          <p v-if="toggleMailError" class="toggle-error">{{ toggleMailError }}</p>
 
           <article class="account-card">
             <div class="account-header">
@@ -208,7 +213,12 @@
 <script setup lang="ts">
 import { computed, reactive, ref, onMounted } from 'vue'
 import { auth } from '@/firebase'
-import { getUserProfile, updateUserProfile, updateTwoFactorStatus } from '@/services/authService'
+import {
+  getUserProfile,
+  updateUserProfile,
+  updateTwoFactorStatus,
+  updateEmailNotificationsStatus,
+} from '@/services/authService'
 import { useAuthStore } from '@/stores/auth'
 import BaseSidebar from '@/components/BaseSidebar.vue'
 import type { NavItem } from '@/components/BaseSidebar.vue'
@@ -242,6 +252,8 @@ const twoFactorEnabled = ref(false)
 const toggling2FA = ref(false)
 const toggle2FAError = ref('')
 const mailNotificationsEnabled = ref(true)
+const togglingMail = ref(false)
+const toggleMailError = ref('')
 const foodListingVisibility = ref<VisibilityOption>('public')
 const isEditingProfile = ref(false)
 
@@ -272,6 +284,7 @@ onMounted(async () => {
       account.householdSize = profile.householdSize || 1
       twoFactorEnabled.value = profile.two_factor_enabled
       authStore.setTwoFactorEnabled(profile.two_factor_enabled)
+      mailNotificationsEnabled.value = profile.email_notifications_enabled ?? true
 
       draftAccount.username = account.username
       draftAccount.email = account.email
@@ -306,6 +319,32 @@ const toggle2FA = async () => {
     }
   } finally {
     toggling2FA.value = false
+  }
+}
+
+const toggleMailNotifications = async () => {
+  const user = auth.currentUser
+  if (!user || togglingMail.value) return
+
+  toggleMailError.value = ''
+  togglingMail.value = true
+  const newValue = !mailNotificationsEnabled.value
+  try {
+    await updateEmailNotificationsStatus(user.uid, newValue)
+    mailNotificationsEnabled.value = newValue
+  } catch (err: unknown) {
+    const code = (err as { code?: string })?.code ?? 'unknown'
+    const message = (err as { message?: string })?.message ?? String(err)
+    console.error('Error updating mail notification status:', code, message)
+    if (code === 'permission-denied') {
+      toggleMailError.value = `Permission denied — Firestore rules are blocking this update. (${code})`
+    } else if (code === 'unavailable') {
+      toggleMailError.value = 'Network unavailable. Check your connection and try again.'
+    } else {
+      toggleMailError.value = `Save failed: ${code}. Check browser console for details.`
+    }
+  } finally {
+    togglingMail.value = false
   }
 }
 
