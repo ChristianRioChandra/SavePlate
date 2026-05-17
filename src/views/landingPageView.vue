@@ -47,7 +47,8 @@ export default {
     scrollToSection(sectionId: string) {
       const element = document.getElementById(sectionId)
       if (element) {
-        element.scrollIntoView({ behavior: 'smooth' })
+        const top = element.getBoundingClientRect().top + window.scrollY - 80
+        window.scrollTo({ top, behavior: 'smooth' })
         this.menuOpen = false
       }
     },
@@ -379,19 +380,19 @@ export default {
             <h4>Product</h4>
             <a href="#features" @click.prevent="scrollToSection('features')">Features</a>
             <a href="#howto" @click.prevent="scrollToSection('howto')">How It Works</a>
-            <a href="#about" @click.prevent="scrollToSection('about')">About</a>
+            <a href="#stats" @click.prevent="scrollToSection('stats')">Impact Statistics</a>
           </div>
           <div class="link-group">
-            <h4>Company</h4>
-            <a href="#mission" @click.prevent="scrollToSection('mission')">Mission</a>
-            <a href="#">Careers</a>
-            <a href="#">Press</a>
+            <h4>PantryPal</h4>
+            <a href="#about" @click.prevent="scrollToSection('about')">About Us</a>
+            <a href="#how" @click.prevent="scrollToSection('how')">Why We Built It</a>
+            <a href="#mission" @click.prevent="scrollToSection('mission')">Our Vision & Mission</a>
           </div>
           <div class="link-group">
-            <h4>Support</h4>
-            <a href="#">Help Center</a>
-            <a href="#">Contact</a>
-            <a href="#">Privacy</a>
+            <h4>Get Started</h4>
+            <a href="#" @click.prevent="goToRegister">Create Account</a>
+            <a href="#" @click.prevent="goToLogin">Sign In</a>
+            <a href="#" @click.prevent="scrollToTop">Back to Top ↑</a>
           </div>
         </div>
         <div class="footer-bottom">
@@ -428,17 +429,12 @@ export default {
     'Segoe UI',
     sans-serif;
   min-height: 100vh;
-  overflow-x: hidden;
 }
 
 .landing-page *,
 .landing-page *::before,
 .landing-page *::after {
   box-sizing: border-box;
-}
-
-:global(html) {
-  scroll-behavior: smooth;
 }
 
 /* NAV */
@@ -882,9 +878,18 @@ nav.open .btn-outline:hover {
 }
 
 .about-right {
-  display: grid;
-  gap: 18px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.about-right img {
+  max-width: 420px;
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 20px 45px rgba(36, 63, 45, 0.14));
+  animation: softBounce 6s ease-in-out infinite;
 }
 
 .about-card {
@@ -1209,7 +1214,32 @@ nav.open .btn-outline:hover {
     min-height: 340px;
   }
 
-  .about-section,
+  .about-section {
+    grid-template-columns: 1fr;
+    text-align: center;
+    padding-top: clamp(60px, 8vw, 100px);
+    padding-bottom: clamp(60px, 8vw, 100px);
+  }
+
+  .about-left {
+    margin: 0 auto;
+    max-width: 600px;
+  }
+
+  .about-right {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 40px;
+  }
+
+  .about-right img {
+    max-width: 220px;
+    height: auto;
+    filter: drop-shadow(0 20px 45px rgba(36, 63, 45, 0.14));
+    animation: softBounce 6s ease-in-out infinite;
+  }
+
   .why-section,
   .mission-section {
     grid-template-columns: 1fr;
