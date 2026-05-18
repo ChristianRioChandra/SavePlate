@@ -44,10 +44,15 @@ vi.mock('@/services/localAnalyticsStore.ts', () => ({
 // Mock foodService
 vi.mock('@/services/foodService', () => ({
   addFoodItem: vi.fn().mockResolvedValue('new-id'),
-  updateFoodItem: vi.fn().mockResolvedValue(true),
-  deleteFoodItem: vi.fn().mockResolvedValue(true),
-  markFoodAsDonated: vi.fn().mockResolvedValue(true),
-  markFoodAsUsed: vi.fn().mockResolvedValue(true),
+  updateFoodItem: vi.fn().mockResolvedValue(undefined),
+  deleteFoodItem: vi.fn().mockResolvedValue(undefined),
+  markFoodAsDonated: vi.fn().mockResolvedValue(undefined),
+  markFoodAsUsed: vi.fn().mockResolvedValue(undefined),
+  logFoodAction: vi.fn().mockResolvedValue('action-id'),
+  FoodActionKind: {
+    FINISHED: 'finished',
+    WASTED: 'wasted',
+  },
 }))
 
 // Mock authService UI prefs

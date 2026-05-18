@@ -1261,6 +1261,8 @@ async function confirmUse() {
   if (!currentUseItemId.value) return
   const item = inventory.value.find((i) => i.id === currentUseItemId.value)
   if (!item) return
+  // Optimistic local update — synchronous, so tests can assert without await
+  item.quantityLevel = selectedUseQuantity.value
   try {
     await updateFoodItem(currentUseItemId.value, {
       quantity_level: mapQuantityLevelToDb(selectedUseQuantity.value as QuantityLevel),
