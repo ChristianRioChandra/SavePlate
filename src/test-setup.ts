@@ -8,4 +8,4 @@ const localStorageMock = {
   clear: vi.fn(),
 }
 
-global.localStorage = localStorageMock
+;(globalThis as Record<string, unknown>).localStorage = localStorageMock

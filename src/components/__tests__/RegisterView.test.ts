@@ -49,8 +49,8 @@ describe('RegisterView', () => {
 
     await wrapper.find('input[type="email"]').setValue('test@mail.com')
     await wrapper.find('input[type="text"]').setValue('Test User')
-    await wrapper.findAll('input[type="password"]')[0].setValue('123456')
-    await wrapper.findAll('input[type="password"]')[1].setValue('654321')
+    await wrapper.findAll('input[type="password"]')[0]!.setValue('123456')
+    await wrapper.findAll('input[type="password"]')[1]!.setValue('654321')
 
     await wrapper.find('button').trigger('click')
 
@@ -64,8 +64,8 @@ describe('RegisterView', () => {
 
     await wrapper.find('input[type="email"]').setValue('test@mail.com')
     await wrapper.find('input[type="text"]').setValue('Test User')
-    await wrapper.findAll('input[type="password"]')[0].setValue('123456')
-    await wrapper.findAll('input[type="password"]')[1].setValue('123456')
+    await wrapper.findAll('input[type="password"]')[0]!.setValue('123456')
+    await wrapper.findAll('input[type="password"]')[1]!.setValue('123456')
 
     await wrapper.find('button').trigger('click')
 
