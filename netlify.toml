@@ -1,0 +1,24 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+# ── Scheduled Functions ────────────────────────────────────────────────────────
+
+# Daily meal reminder – 7:00 AM UTC (3:00 PM WIB / Malaysia Time)
+[functions."send-meal-email"]
+  schedule = "0 7 * * *"
+
+# Daily expiry alert – 8:00 AM UTC (4:00 PM WIB / Malaysia Time)
+[functions."send-daily-email"]
+  schedule = "0 8 * * *"
+
+# Realtime notification emailer – every 30 minutes
+[functions."send-realtime-email"]
+  schedule = "*/30 * * * *"
+
+# ── SPA Redirects ─────────────────────────────────────────────────────────────
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

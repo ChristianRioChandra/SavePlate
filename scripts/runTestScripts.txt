@@ -1,0 +1,10 @@
+cd scripts
+npm install
+# 1. Seed the test data
+node testAllNotifications.cjs
+# 2. Test the Real-time emails (Donation Requests & Account Alerts)
+node realtimeEmailer.cjs
+# 3. Test the Daily Meal email
+node dailyMealEmail.cjs
+# 4. Test the Daily Expiry email
+node dailyEmail.cjs

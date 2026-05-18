@@ -47,7 +47,8 @@ export default {
     scrollToSection(sectionId: string) {
       const element = document.getElementById(sectionId)
       if (element) {
-        element.scrollIntoView({ behavior: 'smooth' })
+        const top = element.getBoundingClientRect().top + window.scrollY - 80
+        window.scrollTo({ top, behavior: 'smooth' })
         this.menuOpen = false
       }
     },
@@ -379,19 +380,19 @@ export default {
             <h4>Product</h4>
             <a href="#features" @click.prevent="scrollToSection('features')">Features</a>
             <a href="#howto" @click.prevent="scrollToSection('howto')">How It Works</a>
-            <a href="#about" @click.prevent="scrollToSection('about')">About</a>
+            <a href="#stats" @click.prevent="scrollToSection('stats')">Impact Statistics</a>
           </div>
           <div class="link-group">
-            <h4>Company</h4>
-            <a href="#mission" @click.prevent="scrollToSection('mission')">Mission</a>
-            <a href="#">Careers</a>
-            <a href="#">Press</a>
+            <h4>PantryPal</h4>
+            <a href="#about" @click.prevent="scrollToSection('about')">About Us</a>
+            <a href="#how" @click.prevent="scrollToSection('how')">Why We Built It</a>
+            <a href="#mission" @click.prevent="scrollToSection('mission')">Our Vision & Mission</a>
           </div>
           <div class="link-group">
-            <h4>Support</h4>
-            <a href="#">Help Center</a>
-            <a href="#">Contact</a>
-            <a href="#">Privacy</a>
+            <h4>Get Started</h4>
+            <a href="#" @click.prevent="goToRegister">Create Account</a>
+            <a href="#" @click.prevent="goToLogin">Sign In</a>
+            <a href="#" @click.prevent="scrollToTop">Back to Top ↑</a>
           </div>
         </div>
         <div class="footer-bottom">
@@ -409,7 +410,7 @@ export default {
   --sage: #7a9e7e;
   --deep-sage: #4a7050;
   --forest: #243f2d;
-  --clay: #c4724a;
+  --clay: #2c7a4d;
   --amber: #d4a847;
   --ink: #16221a;
   --slate: #425e6f;
@@ -428,17 +429,12 @@ export default {
     'Segoe UI',
     sans-serif;
   min-height: 100vh;
-  overflow-x: hidden;
 }
 
 .landing-page *,
 .landing-page *::before,
 .landing-page *::after {
   box-sizing: border-box;
-}
-
-:global(html) {
-  scroll-behavior: smooth;
 }
 
 /* NAV */
@@ -473,6 +469,11 @@ nav.open {
 nav.scrolled .btn-outline:hover,
 nav.open .btn-outline:hover {
   -webkit-text-fill-color: #fff;
+}
+
+nav.scrolled .nav-links a,
+nav.scrolled .user-greeting {
+  text-shadow: none !important;
 }
 
 .nav-logo {
@@ -519,6 +520,7 @@ nav.open .btn-outline:hover {
   position: relative;
   text-decoration: none;
   transition: color 0.2s ease;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
 .nav-links a::after {
@@ -554,6 +556,7 @@ nav.open .btn-outline:hover {
   font-size: 0.9rem;
   font-weight: 600;
   white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
 .logout-btn {
@@ -607,13 +610,16 @@ nav.open .btn-outline:hover {
 .btn-primary {
   background: var(--clay);
   border: 1.5px solid var(--clay);
-  box-shadow: 0 12px 24px rgba(196, 114, 74, 0.28);
+  box-shadow: 0 12px 24px rgba(44, 122, 77, 0.24);
   color: #fff;
+  -webkit-text-fill-color: #fff;
 }
 
 .btn-primary:hover {
-  background: #ac5f3e;
-  border-color: #ac5f3e;
+  background: #1e5c38;
+  border-color: #1e5c38;
+  color: #fff;
+  -webkit-text-fill-color: #fff;
   transform: translateY(-2px);
 }
 
@@ -621,6 +627,12 @@ nav.open .btn-outline:hover {
 .hero {
   align-items: center;
   background:
+    linear-gradient(
+      180deg,
+      rgba(11, 21, 14, 0.8) 0%,
+      rgba(11, 21, 14, 0.15) 120px,
+      transparent 220px
+    ),
     linear-gradient(
       90deg,
       rgba(11, 21, 14, 0.76),
@@ -882,9 +894,18 @@ nav.open .btn-outline:hover {
 }
 
 .about-right {
-  display: grid;
-  gap: 18px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.about-right img {
+  max-width: 420px;
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 20px 45px rgba(36, 63, 45, 0.14));
+  animation: softBounce 6s ease-in-out infinite;
 }
 
 .about-card {
@@ -906,7 +927,7 @@ nav.open .btn-outline:hover {
 
 .about-card:hover,
 .feature-card:hover {
-  border-color: rgba(196, 114, 74, 0.42);
+  border-color: rgba(44, 122, 77, 0.42);
   box-shadow: 0 24px 60px rgba(36, 63, 45, 0.11);
   transform: translateY(-6px);
 }
@@ -1209,7 +1230,32 @@ nav.open .btn-outline:hover {
     min-height: 340px;
   }
 
-  .about-section,
+  .about-section {
+    grid-template-columns: 1fr;
+    text-align: center;
+    padding-top: clamp(60px, 8vw, 100px);
+    padding-bottom: clamp(60px, 8vw, 100px);
+  }
+
+  .about-left {
+    margin: 0 auto;
+    max-width: 600px;
+  }
+
+  .about-right {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 40px;
+  }
+
+  .about-right img {
+    max-width: 220px;
+    height: auto;
+    filter: drop-shadow(0 20px 45px rgba(36, 63, 45, 0.14));
+    animation: softBounce 6s ease-in-out infinite;
+  }
+
   .why-section,
   .mission-section {
     grid-template-columns: 1fr;

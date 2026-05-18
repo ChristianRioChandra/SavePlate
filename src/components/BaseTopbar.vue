@@ -15,7 +15,7 @@
               class="notif-popup-item"
               :class="{ unread: !notif.is_read }"
             >
-              <div class="notif-item-icon">{{ notif.icon }}</div>
+              <div class="notif-item-icon"><i class="bi" :class="notif.icon"></i></div>
               <div class="notif-item-body">
                 <div class="notif-item-title">{{ notif.title }}</div>
                 <div class="notif-item-detail">{{ notif.message }}</div>
@@ -52,8 +52,8 @@
           <slot name="actions">
             <div class="notif-bell-container" @click="showNotifPopup = true">
               <i class="bi bi-bell clickable" title="Notifications"></i>
-              <span v-if="unreadCount && unreadCount > 0" class="notif-badge">
-                {{ unreadCount > 9 ? '9+' : unreadCount }}
+              <span v-if="notificationsStore.unreadCount > 0" class="notif-badge">
+                {{ notificationsStore.unreadCount > 9 ? '9+' : notificationsStore.unreadCount }}
               </span>
             </div>
             <i class="bi bi-gear clickable" @click="navigateToSettings" title="Settings"></i>
@@ -117,10 +117,14 @@ const handleLogout = async () => {
 </script>
 
 <style scoped>
- .top-bar {
+.top-bar-container {
   position: sticky;
   top: 24px;
   z-index: 50;
+  width: 100%;
+}
+
+ .top-bar {
   background: white;
   border-radius: 36px;
   padding: 18px 30px;
@@ -130,7 +134,7 @@ const handleLogout = async () => {
   flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 28px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
 .page-title h2 {
@@ -190,27 +194,33 @@ const handleLogout = async () => {
 
 .notif-bell-container {
   position: relative;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   cursor: pointer;
 }
 
 .notif-badge {
   position: absolute;
-  top: -4px;
-  right: -6px;
-  background: #dc2626;
+  top: 2px;
+  right: 2px;
+  transform: translate(50%, -50%);
+  background: linear-gradient(135deg, #ff4d4d, #e60000);
   color: white;
-  font-size: 10px;
-  font-weight: 700;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 800;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4.5px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid white;
+  border: 1.5px solid white;
   pointer-events: none;
+  box-shadow: 0 3px 8px rgba(230, 0, 0, 0.35);
+  font-family: 'Inter', sans-serif;
+  line-height: 1;
 }
 
 /* ── Notification Popup ────────────────────────────────────────────────────── */

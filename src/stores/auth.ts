@@ -25,9 +25,17 @@ export const useAuthStore = defineStore('auth', () => {
   )
   const isAuthOnly = computed(() => user.value !== null)
   const is2FARequired = computed(() => twoFactorEnabled.value && !otpVerified.value)
+  
+  // Custom display name override for immediate UI reactivity
+  const displayNameOverride = ref<string | null>(null)
+  
   const userName = computed(
-    () => user.value?.displayName || user.value?.email?.split('@')[0] || 'User',
+    () => displayNameOverride.value || user.value?.displayName || user.value?.email?.split('@')[0] || 'User',
   )
+
+  const updateDisplayName = (name: string) => {
+    displayNameOverride.value = name
+  }
 
   const setOtpVerified = (verified: boolean) => {
     otpVerified.value = verified
@@ -94,6 +102,7 @@ export const useAuthStore = defineStore('auth', () => {
     lastActivityTime,
     resetActivity,
     userName,
+    updateDisplayName,
     logout,
   }
 })

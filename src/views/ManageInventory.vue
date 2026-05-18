@@ -1,315 +1,319 @@
-manage inventory
-
-
-
-
 <template>
   <div class="manage-inventory-page">
     <!-- Topbar handles its own notification popup internally now -->
 
     <!-- USE MODAL -->
-    <div v-if="useModalOpen" class="modal-overlay" style="display: flex">
-      <div class="modal-box">
-        <h2>Update Item Usage</h2>
-        <p style="font-weight: 600; text-align: center">{{ useItemName }}</p>
-        <p style="font-size: 0.85rem; margin-top: 10px">Update remaining quantity:</p>
+    <Transition name="premium-modal">
+      <div v-if="useModalOpen" class="modal-overlay" @click.self="closeUseModal">
+        <div class="modal-box">
+          <h2>Update Item Usage</h2>
+          <p style="font-weight: 600; text-align: center">{{ useItemName }}</p>
+          <p style="font-size: 0.85rem; margin-top: 10px">Update remaining quantity:</p>
 
-        <div class="quantity-selector" id="useQtySelector">
-          <div
-            class="qty-option low"
-            :class="{ selected: selectedUseQuantity === 'low' }"
-            data-level="low"
-            @click="selectedUseQuantity = 'low'"
-          >
-            Low
-          </div>
-          <div
-            class="qty-option half"
-            :class="{ selected: selectedUseQuantity === 'half' }"
-            data-level="half"
-            @click="selectedUseQuantity = 'half'"
-          >
-            Half
-          </div>
-          <div
-            class="qty-option high"
-            :class="{ selected: selectedUseQuantity === 'high' }"
-            data-level="high"
-            @click="selectedUseQuantity = 'high'"
-          >
-            High
-          </div>
-          <div
-            class="qty-option full"
-            :class="{ selected: selectedUseQuantity === 'full' }"
-            data-level="full"
-            @click="selectedUseQuantity = 'full'"
-          >
-            Full
-          </div>
-        </div>
-
-        <button
-          @click="requestFinishItem"
-          style="
-            margin-top: 10px;
-            background: #fee2e2;
-            color: #b91c1c;
-            border: none;
-            padding: 10px;
-            border-radius: 14px;
-            font-weight: 600;
-            cursor: pointer;
-          "
-        >
-          Finish Item (Remove)
-        </button>
-
-        <div class="modal-actions">
-          <button @click="closeUseModal" class="modal-cancel">Cancel</button>
-          <button @click="confirmUse" class="modal-add">Save</button>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="confirmationModalOpen" class="modal-overlay confirmation-overlay" style="display: flex">
-      <div class="modal-box confirmation-modal">
-        <h2>{{ confirmationConfig.title }}</h2>
-        <p class="confirmation-copy">
-          {{ confirmationConfig.message }}
-          <strong>{{ confirmationItemName }}</strong
-          >?
-        </p>
-
-        <div class="modal-actions">
-          <button type="button" @click="closeConfirmationModal" class="modal-cancel">Cancel</button>
-          <button
-            type="button"
-            @click="confirmPendingAction"
-            class="modal-add modal-danger"
-          >
-            {{ confirmationConfig.confirmLabel }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ADD ITEM MODAL -->
-    <div v-if="addModalOpen" class="modal-overlay" style="display: flex">
-      <div class="modal-box">
-        <h2>Add New Food Item</h2>
-
-        <div class="form-section">
-          <label class="field-label"
-            >Food Item Title <span class="char-count">({{ newItem.name.length }}/20)</span></label
-          >
-          <input
-            type="text"
-            v-model="newItem.name"
-            placeholder="Enter food item name"
-            maxlength="20"
-            class="form-input"
-          />
-        </div>
-
-        <div class="form-section">
-          <label class="field-label"
-            >Short Description
-            <span class="char-count">({{ newItem.description.length }}/180)</span></label
-          >
-          <textarea
-            v-model="newItem.description"
-            placeholder="Brief description of the food item"
-            maxlength="180"
-            class="form-textarea"
-            rows="3"
-          ></textarea>
-        </div>
-
-        <div class="form-row expiry-row">
-          <div class="form-section">
-            <label class="field-label">Expiry Date</label>
-            <input
-              id="expiryDate"
-              v-model="newItem.expiryDate"
-              class="date-input"
-              :class="{ 'has-date': !!newItem.expiryDate }"
-              type="date"
-              :min="todayDate"
-            />
-          </div>
-          <div
-            class="expiry-preview expiry-summary"
-            :class="{
-              empty: !newItem.expiryDate,
-              urgent: newItemExpiryDays !== null && newItemExpiryDays <= 3,
-            }"
-          >
-            {{ newItemExpiryLabel }}
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-section">
-            <label class="field-label">Food Type</label>
-            <select v-model="newItem.foodType" class="form-input">
-              <option v-for="type in foodTypeOptions" :key="type" :value="type">
-                {{ type }}
-              </option>
-            </select>
-          </div>
-          <div class="form-section">
-            <label class="field-label"
-              >Volume/Quantity
-              <span class="char-count">({{ newItem.volume.length }}/7)</span></label
-            >
-            <input
-              type="text"
-              v-model="newItem.volume"
-              placeholder="e.g., 500ml, 1kg, 12 pieces"
-              maxlength="7"
-              class="form-input"
-            />
-          </div>
-        </div>
-
-        <div class="form-section">
-          <label class="field-label">Storage Location</label>
-          <div class="storage-select">
-            <button
-              class="storage-btn"
-              :class="{ active: selectedStorage === 'fridge' }"
-              @click="selectedStorage = 'fridge'"
-            >
-              <i class="bi bi-thermometer-low"></i> Fridge
-            </button>
-            <button
-              class="storage-btn"
-              :class="{ active: selectedStorage === 'freezer' }"
-              @click="selectedStorage = 'freezer'"
-            >
-              <i class="bi bi-snow"></i> Freezer
-            </button>
-            <button
-              class="storage-btn"
-              :class="{ active: selectedStorage === 'pantry' }"
-              @click="selectedStorage = 'pantry'"
-            >
-              <i class="bi bi-bookshelf"></i> Pantry
-            </button>
-            <button
-              class="storage-btn"
-              :class="{ active: selectedStorage === 'countertop' }"
-              @click="selectedStorage = 'countertop'"
-            >
-              <i class="bi bi-cup-hot"></i> Countertop
-            </button>
-          </div>
-        </div>
-
-        <div class="form-section">
-          <label class="field-label">Quantity Level</label>
-          <div class="qty-progress-wrapper">
-            <div class="qty-progress-bar">
-              <div
-                class="qty-progress-fill"
-                :style="{ width: qtyProgress.percent, background: qtyProgress.color }"
-              ></div>
-            </div>
-            <div class="qty-progress-label">{{ qtyProgress.label }}</div>
-          </div>
-
-          <div class="quantity-selector" id="modalQtySelector">
+          <div class="quantity-selector" id="useQtySelector">
             <div
               class="qty-option low"
-              :class="{ selected: selectedQuantityLevel === 'low' }"
-              @click="setQuantityLevel('low')"
+              :class="{ selected: selectedUseQuantity === 'low' }"
+              data-level="low"
+              @click="selectedUseQuantity = 'low'"
             >
               Low
             </div>
             <div
               class="qty-option half"
-              :class="{ selected: selectedQuantityLevel === 'half' }"
-              @click="setQuantityLevel('half')"
+              :class="{ selected: selectedUseQuantity === 'half' }"
+              data-level="half"
+              @click="selectedUseQuantity = 'half'"
             >
               Half
             </div>
             <div
               class="qty-option high"
-              :class="{ selected: selectedQuantityLevel === 'high' }"
-              @click="setQuantityLevel('high')"
+              :class="{ selected: selectedUseQuantity === 'high' }"
+              data-level="high"
+              @click="selectedUseQuantity = 'high'"
             >
               High
             </div>
             <div
               class="qty-option full"
-              :class="{ selected: selectedQuantityLevel === 'full' }"
-              @click="setQuantityLevel('full')"
+              :class="{ selected: selectedUseQuantity === 'full' }"
+              data-level="full"
+              @click="selectedUseQuantity = 'full'"
             >
               Full
             </div>
           </div>
-        </div>
 
-        <div class="modal-actions">
-          <button @click="closeAddModal" class="modal-cancel" :disabled="addModalSubmitting">Cancel</button>
-          <button @click="confirmAdd" class="modal-add" :disabled="addModalSubmitting">
-            {{ addModalSubmitting ? 'Adding...' : 'Add Item' }}
+          <button
+            @click="requestFinishItem"
+            style="
+              margin-top: 10px;
+              background: #fee2e2;
+              color: #b91c1c;
+              border: none;
+              padding: 10px;
+              border-radius: 14px;
+              font-weight: 600;
+              cursor: pointer;
+            "
+          >
+            Finish Item (Remove)
           </button>
+
+          <div class="modal-actions">
+            <button @click="closeUseModal" class="modal-cancel">Cancel</button>
+            <button @click="confirmUse" class="modal-add">Save</button>
+          </div>
         </div>
       </div>
-    </div>
+    </Transition>
 
-    <div v-if="mobileFilterModalOpen" class="modal-overlay mobile-filter-overlay" style="display: flex">
-      <div class="modal-box mobile-filter-box">
-        <div class="mobile-filter-header">
-          <div>
-            <h2>Refine Inventory</h2>
-            <p>Choose a storage filter and sorting mode.</p>
-          </div>
-          <button type="button" class="mobile-filter-close" @click="closeMobileFilterModal">
-            <i class="bi bi-x-lg"></i>
-          </button>
-        </div>
+    <Transition name="premium-modal">
+      <div v-if="confirmationModalOpen" class="modal-overlay confirmation-overlay" @click.self="closeConfirmationModal">
+        <div class="modal-box confirmation-modal">
+          <h2>{{ confirmationConfig.title }}</h2>
+          <p class="confirmation-copy">
+            {{ confirmationConfig.message }}
+            <strong>{{ confirmationItemName }}</strong
+            >?
+          </p>
 
-        <div class="mobile-filter-group">
-          <span class="mobile-filter-label">Storage</span>
-          <div class="mobile-filter-grid">
+          <div class="modal-actions">
+            <button type="button" @click="closeConfirmationModal" class="modal-cancel">Cancel</button>
             <button
-              v-for="mode in filterModes"
-              :key="mode"
               type="button"
-              class="mobile-filter-chip"
-              :class="{ active: currentFilter === mode }"
-              @click="currentFilter = mode"
+              @click="confirmPendingAction"
+              class="modal-add modal-danger"
             >
-              {{ getFilterLabel(mode) }}
+              {{ confirmationConfig.confirmLabel }}
             </button>
           </div>
         </div>
+      </div>
+    </Transition>
 
-        <div class="mobile-filter-group">
-          <span class="mobile-filter-label">Sort By</span>
-          <div class="mobile-filter-grid sort-grid">
-            <button
-              v-for="mode in sortModes"
-              :key="mode"
-              type="button"
-              class="mobile-filter-chip"
-              :class="{ active: currentSort === mode }"
-              @click="currentSort = mode"
+    <!-- ADD ITEM MODAL -->
+    <Transition name="premium-modal">
+      <div v-if="addModalOpen" class="modal-overlay" @click.self="closeAddModal">
+        <div class="modal-box">
+          <h2>Add New Food Item</h2>
+
+          <div class="form-section">
+            <label class="field-label"
+              >Food Item Title <span class="char-count">({{ newItem.name.length }}/20)</span></label
             >
-              {{ getSortLabel(mode) }}
+            <input
+              type="text"
+              v-model="newItem.name"
+              placeholder="Enter food item name"
+              maxlength="20"
+              class="form-input"
+            />
+          </div>
+
+          <div class="form-section">
+            <label class="field-label"
+              >Short Description
+              <span class="char-count">({{ newItem.description.length }}/180)</span></label
+            >
+            <textarea
+              v-model="newItem.description"
+              placeholder="Brief description of the food item"
+              maxlength="180"
+              class="form-textarea"
+              rows="3"
+            ></textarea>
+          </div>
+
+          <div class="form-row expiry-row">
+            <div class="form-section">
+              <label class="field-label">Expiry Date</label>
+              <input
+                id="expiryDate"
+                v-model="newItem.expiryDate"
+                class="date-input"
+                :class="{ 'has-date': !!newItem.expiryDate }"
+                type="date"
+                :min="todayDate"
+              />
+            </div>
+            <div
+              class="expiry-preview expiry-summary"
+              :class="{
+                empty: !newItem.expiryDate,
+                urgent: newItemExpiryDays !== null && newItemExpiryDays <= 3,
+              }"
+            >
+              {{ newItemExpiryLabel }}
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-section">
+              <label class="field-label">Food Type</label>
+              <select v-model="newItem.foodType" class="form-input">
+                <option v-for="type in foodTypeOptions" :key="type" :value="type">
+                  {{ type }}
+                </option>
+              </select>
+            </div>
+            <div class="form-section">
+              <label class="field-label"
+                >Volume/Quantity
+                <span class="char-count">({{ newItem.volume.length }}/7)</span></label
+              >
+              <input
+                type="text"
+                v-model="newItem.volume"
+                placeholder="e.g., 500ml, 1kg, 12 pieces"
+                maxlength="7"
+                class="form-input"
+              />
+            </div>
+          </div>
+
+          <div class="form-section">
+            <label class="field-label">Storage Location</label>
+            <div class="storage-select">
+              <button
+                class="storage-btn"
+                :class="{ active: selectedStorage === 'fridge' }"
+                @click="selectedStorage = 'fridge'"
+              >
+                <i class="bi bi-thermometer-low"></i> Fridge
+              </button>
+              <button
+                class="storage-btn"
+                :class="{ active: selectedStorage === 'freezer' }"
+                @click="selectedStorage = 'freezer'"
+              >
+                <i class="bi bi-snow"></i> Freezer
+              </button>
+              <button
+                class="storage-btn"
+                :class="{ active: selectedStorage === 'pantry' }"
+                @click="selectedStorage = 'pantry'"
+              >
+                <i class="bi bi-bookshelf"></i> Pantry
+              </button>
+              <button
+                class="storage-btn"
+                :class="{ active: selectedStorage === 'countertop' }"
+                @click="selectedStorage = 'countertop'"
+              >
+                <i class="bi bi-cup-hot"></i> Countertop
+              </button>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <label class="field-label">Quantity Level</label>
+            <div class="qty-progress-wrapper">
+              <div class="qty-progress-bar">
+                <div
+                  class="qty-progress-fill"
+                  :style="{ width: qtyProgress.percent, background: qtyProgress.color }"
+                ></div>
+              </div>
+              <div class="qty-progress-label">{{ qtyProgress.label }}</div>
+            </div>
+
+            <div class="quantity-selector" id="modalQtySelector">
+              <div
+                class="qty-option low"
+                :class="{ selected: selectedQuantityLevel === 'low' }"
+                @click="setQuantityLevel('low')"
+              >
+                Low
+              </div>
+              <div
+                class="qty-option half"
+                :class="{ selected: selectedQuantityLevel === 'half' }"
+                @click="setQuantityLevel('half')"
+              >
+                Half
+              </div>
+              <div
+                class="qty-option high"
+                :class="{ selected: selectedQuantityLevel === 'high' }"
+                @click="setQuantityLevel('high')"
+              >
+                High
+              </div>
+              <div
+                class="qty-option full"
+                :class="{ selected: selectedQuantityLevel === 'full' }"
+                @click="setQuantityLevel('full')"
+              >
+                Full
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button @click="closeAddModal" class="modal-cancel" :disabled="addModalSubmitting">Cancel</button>
+            <button @click="confirmAdd" class="modal-add" :disabled="addModalSubmitting">
+              {{ addModalSubmitting ? 'Adding...' : 'Add Item' }}
             </button>
           </div>
         </div>
+      </div>
+    </Transition>
 
-        <div class="mobile-filter-actions">
-          <button type="button" class="modal-cancel" @click="resetMobileFilters">Reset</button>
-          <button type="button" class="modal-add" @click="closeMobileFilterModal">Apply</button>
+    <Transition name="premium-modal">
+      <div v-if="mobileFilterModalOpen" class="modal-overlay mobile-filter-overlay" @click.self="closeMobileFilterModal">
+        <div class="modal-box mobile-filter-box">
+          <div class="mobile-filter-header">
+            <div>
+              <h2>Refine Inventory</h2>
+              <p>Choose a storage filter and sorting mode.</p>
+            </div>
+            <button type="button" class="mobile-filter-close" @click="closeMobileFilterModal">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+
+          <div class="mobile-filter-group">
+            <span class="mobile-filter-label">Storage</span>
+            <div class="mobile-filter-grid">
+              <button
+                v-for="mode in filterModes"
+                :key="mode"
+                type="button"
+                class="mobile-filter-chip"
+                :class="{ active: isFilterActive(mode) }"
+                @click="toggleMobileFilter(mode)"
+              >
+                {{ getFilterLabel(mode) }}
+                <i v-if="isFilterActive(mode)" class="bi bi-check-circle-fill"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="mobile-filter-group">
+            <span class="mobile-filter-label">Sort By</span>
+            <div class="mobile-filter-grid sort-grid">
+              <button
+                v-for="mode in sortModes"
+                :key="mode"
+                type="button"
+                class="mobile-filter-chip"
+                :class="{ active: currentSort === mode }"
+                @click="currentSort = mode"
+              >
+                {{ getSortLabel(mode) }}
+              </button>
+            </div>
+          </div>
+
+          <div class="mobile-filter-actions">
+            <button type="button" class="modal-cancel" @click="resetMobileFilters">Reset</button>
+            <button type="button" class="modal-add" @click="closeMobileFilterModal">Apply</button>
+          </div>
         </div>
       </div>
-    </div>
+    </Transition>
 
     <div class="dashboard">
       <BaseSidebar :nav-items="navItems" />
@@ -345,8 +349,8 @@ manage inventory
               :key="mode"
               type="button"
               class="mobile-quick-chip"
-              :class="{ active: currentFilter === mode }"
-              @click="currentFilter = mode"
+              :class="{ active: isFilterActive(mode) }"
+              @click="toggleMobileFilter(mode)"
             >
               {{ getFilterLabel(mode) }}
             </button>
@@ -392,626 +396,146 @@ manage inventory
         </div>
 
         <div v-if="inventoryLayout === 'cards'">
-          <!-- ALL CATEGORY -->
-          <div
-            class="storage-category"
-            :class="{ expanded: expandedCategories.all }"
-            id="allCategory"
-          >
+
+          <!-- ALL ITEMS VIEW -->
+          <div class="storage-category" :class="{ expanded: expandedCategories.all }" id="allCategory">
             <div class="category-header" @click="toggleCategory('all')">
-              <div class="cat-title">
-                <i class="bi bi-box"></i>
-                <h2>All Category</h2>
-                <div class="cat-badge">{{ getCategoryCount('all') }} items</div>
-              </div>
+              <div class="cat-title"><i class="bi bi-box"></i><h2>All Items</h2><div class="cat-badge">{{ getCategoryCount('all') }} items</div></div>
               <div class="expand-cat-icon"><i class="bi bi-chevron-down"></i></div>
             </div>
             <div class="category-items">
               <div class="food-grid" data-category="all" id="allGrid">
-                <div
-                  v-for="item in getFilteredAndSortedItems('all')"
-                  :key="item.id"
-                  class="food-item-card"
-                  :class="{
-                    'selected-for-donation': selectedDonationIds.has(item.id),
-                    'hidden-by-search': isHiddenBySearch(item),
-                  }"
-                  :data-food-id="item.id"
-                  :data-food-name="item.name"
-                  :data-search-terms="`${item.name} ${item.volume} ${item.foodType} ${item.description} ${item.searchTerms}`"
-                  :data-category="item.category"
-                >
-                  <div class="checkbox-overlay">
-                    <input
-                      type="checkbox"
-                      class="donation-checkbox"
-                      :checked="selectedDonationIds.has(item.id)"
-                      @change="toggleDonationSelection(item.id)"
-                    />
-                  </div>
-
-                  <div class="card-header">
-                    <div class="card-title-section">
-                      <h3 class="food-title">{{ escapeHtml(item.name) }}</h3>
-
-                      <div class="row3">
-                        <span v-if="item.expiryDays <= 3" class="expiry-badge urgent">
-                          <i class="bi bi-exclamation-triangle"></i> expires in
-                          {{ item.expiryDays }}d
-                        </span>
-                        <span v-else class="expiry-badge">
-                          <i class="bi bi-clock"></i> {{ item.expiryDays }}d left
-                        </span>
-                      </div>
-                      <div class="row5">
-                        <span class="tag storage-tag">{{ item.category }}</span>
-                        <span class="tag type-tag">{{ item.foodType }}</span>
-                        <span class="volume-badge">{{ item.volume }}</span>
-                      </div>
+                <div v-for="item in getFilteredAndSortedItems('all')" :key="item.id"
+                  class="food-item-card" :class="{ 'selected-for-donation': selectedDonationIds.has(item.id), 'hidden-by-search': isHiddenBySearch(item) }"
+                  :data-food-id="item.id" :data-category="item.category">
+                  <div class="checkbox-overlay"><input type="checkbox" class="donation-checkbox" :checked="selectedDonationIds.has(item.id)" @change="toggleDonationSelection(item.id)" /></div>
+                  <div class="card-header"><div class="card-title-section">
+                    <h3 class="food-title">{{ escapeHtml(item.name) }}</h3>
+                    <div class="row3">
+                      <span v-if="item.isExpired" class="expiry-badge expired"><i class="bi bi-x-circle"></i> Expired</span>
+                      <span v-else-if="item.expiryDays <= 3" class="expiry-badge urgent"><i class="bi bi-exclamation-triangle"></i> expires in {{ item.expiryDays }}d</span>
+                      <span v-else class="expiry-badge"><i class="bi bi-clock"></i> {{ item.expiryDays }}d left</span>
                     </div>
-                  </div>
-
+                    <div class="row5">
+                      <span class="tag storage-tag">{{ item.category }}</span>
+                      <span class="tag type-tag">{{ item.foodType }}</span>
+                      <span class="volume-badge">{{ item.volume }}</span>
+                    </div>
+                  </div></div>
                   <p class="food-description">{{ item.description }}</p>
-
-                  <div class="card-meta">
-                    <div class="storage-tags"></div>
-                  </div>
-
+                  <div class="card-meta"><div class="storage-tags"></div></div>
                   <div class="row2">
                     <div class="quantity-level-label-wrapper">
-                      <span class="quantity-label" :class="item.quantityLevel || 'high'">{{
-                        quantityLabels[item.quantityLevel as keyof typeof quantityLabels] ||
-                        quantityLabels.high
-                      }}</span>
+                      <span class="quantity-label" :class="item.quantityLevel || 'high'">{{ quantityLabels[item.quantityLevel as keyof typeof quantityLabels] || quantityLabels.high }}</span>
                     </div>
                     <div class="quantity-level-label-wrapper">
-                      <div class="usage-bar">
-                        <div
-                          class="usage-fill"
-                          :class="item.quantityLevel || 'high'"
-                          :style="{
-                            width:
-                              quantityWidths[item.quantityLevel as keyof typeof quantityWidths] ||
-                              quantityWidths.high,
-                          }"
-                        ></div>
-                      </div>
+                      <div class="usage-bar"><div class="usage-fill" :class="item.quantityLevel || 'high'" :style="{ width: quantityWidths[item.quantityLevel as keyof typeof quantityWidths] || quantityWidths.high }"></div></div>
                     </div>
                   </div>
-
                   <div class="food-extra-actions">
-                    <button class="mini-btn delete-item" @click="requestDeleteItem(item.id)">
-                      <i class="bi bi-trash"></i> Delete
-                    </button>
-                    <button class="mini-btn use-item" @click="openUseModal(item.id)">
-                      <i class="bi bi-check"></i> Use
-                    </button>
-                    <button class="mini-btn donate-mini" @click="singleDonate(item.id)">
-                      <i class="bi bi-gift"></i> Donate
-                    </button>
+                    <button class="mini-btn delete-item" @click="requestDeleteItem(item.id)"><i class="bi bi-trash"></i> Delete</button>
+                    <button class="mini-btn use-item" @click="openUseModal(item.id)"><i class="bi bi-check"></i> Use</button>
+                    <button class="mini-btn donate-mini" @click="singleDonate(item.id)"><i class="bi bi-gift"></i> Donate</button>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- FRIDGE CATEGORY -->
-          <div
-            class="storage-category"
-            :class="{ expanded: expandedCategories.fridge }"
-            id="fridgeCategory"
-          >
-            <div class="category-header" @click="toggleCategory('fridge')">
-              <div class="cat-title">
-                <i class="bi bi-thermometer-low"></i>
-                <h2>Fridge</h2>
-                <div class="cat-badge">{{ getCategoryCount('fridge') }} items</div>
+          <!-- LOCATION SECTIONS -->
+          <template v-for="loc in [
+            { key: 'fridge',     label: 'Fridge',     icon: 'bi bi-thermometer-low' },
+            { key: 'pantry',     label: 'Pantry',     icon: 'bi bi-bookshelf' },
+            { key: 'freezer',    label: 'Freezer',    icon: 'bi bi-snow' },
+            { key: 'countertop', label: 'Countertop', icon: 'bi bi-cup-hot' },
+          ]" :key="loc.key">
+            <div v-if="visibleLocations.includes(loc.key)"
+              class="storage-category" :class="{ expanded: expandedCategories[loc.key as keyof typeof expandedCategories] }"
+              :id="loc.key + 'Category'">
+              <div class="category-header" @click="toggleCategory(loc.key as keyof typeof expandedCategories)">
+                <div class="cat-title"><i :class="loc.icon"></i><h2>{{ loc.label }}</h2><div class="cat-badge">{{ getLocationSectionItems(loc.key).length }} items</div></div>
+                <div class="expand-cat-icon"><i class="bi bi-chevron-down"></i></div>
               </div>
-              <div class="expand-cat-icon"><i class="bi bi-chevron-down"></i></div>
-            </div>
-            <div class="category-items">
-              <div class="food-grid" data-category="fridge" id="fridgeGrid">
-                <div
-                  v-for="item in getFilteredAndSortedItems('fridge')"
-                  :key="item.id"
-                  class="food-item-card"
-                  :class="{
-                    'selected-for-donation': selectedDonationIds.has(item.id),
-                    'hidden-by-search': isHiddenBySearch(item),
-                  }"
-                  :data-food-id="item.id"
-                  :data-food-name="item.name"
-                  :data-search-terms="`${item.name} ${item.volume} ${item.foodType} ${item.description} ${item.searchTerms}`"
-                  :data-category="item.category"
-                >
-                  <div class="checkbox-overlay">
-                    <input
-                      type="checkbox"
-                      class="donation-checkbox"
-                      :checked="selectedDonationIds.has(item.id)"
-                      @change="toggleDonationSelection(item.id)"
-                    />
-                  </div>
-
-                  <div class="card-header">
-                    <div class="card-title-section">
+              <div class="category-items">
+                <div class="food-grid" :data-category="loc.key" :id="loc.key + 'Grid'">
+                  <div v-for="item in getLocationSectionItems(loc.key)" :key="item.id"
+                    class="food-item-card" :class="{ 'selected-for-donation': selectedDonationIds.has(item.id), 'hidden-by-search': isHiddenBySearch(item) }"
+                    :data-food-id="item.id" :data-category="item.category">
+                    <div class="checkbox-overlay"><input type="checkbox" class="donation-checkbox" :checked="selectedDonationIds.has(item.id)" @change="toggleDonationSelection(item.id)" /></div>
+                    <div class="card-header"><div class="card-title-section">
                       <h3 class="food-title">{{ escapeHtml(item.name) }}</h3>
-
                       <div class="row3">
-                        <span v-if="item.expiryDays <= 3" class="expiry-badge urgent">
-                          <i class="bi bi-exclamation-triangle"></i> expires in
-                          {{ item.expiryDays }}d
-                        </span>
-                        <span v-else class="expiry-badge">
-                          <i class="bi bi-clock"></i> {{ item.expiryDays }}d left
-                        </span>
+                        <span v-if="item.isExpired" class="expiry-badge expired"><i class="bi bi-x-circle"></i> Expired</span>
+                        <span v-else-if="item.expiryDays <= 3" class="expiry-badge urgent"><i class="bi bi-exclamation-triangle"></i> expires in {{ item.expiryDays }}d</span>
+                        <span v-else class="expiry-badge"><i class="bi bi-clock"></i> {{ item.expiryDays }}d left</span>
                       </div>
                       <div class="row5">
                         <span class="tag storage-tag">{{ item.category }}</span>
                         <span class="tag type-tag">{{ item.foodType }}</span>
                         <span class="volume-badge">{{ item.volume }}</span>
                       </div>
-                    </div>
-                  </div>
-
-                  <p class="food-description">{{ item.description }}</p>
-
-                  <div class="card-meta">
-                    <div class="storage-tags"></div>
-                  </div>
-
-                  <div class="row2">
-                    <div class="quantity-level-label-wrapper">
-                      <span class="quantity-label" :class="item.quantityLevel || 'high'">{{
-                        quantityLabels[item.quantityLevel as keyof typeof quantityLabels] ||
-                        quantityLabels.high
-                      }}</span>
-                    </div>
-                    <div class="quantity-level-label-wrapper">
-                      <div class="usage-bar">
-                        <div
-                          class="usage-fill"
-                          :class="item.quantityLevel || 'high'"
-                          :style="{
-                            width:
-                              quantityWidths[item.quantityLevel as keyof typeof quantityWidths] ||
-                              quantityWidths.high,
-                          }"
-                        ></div>
+                    </div></div>
+                    <p class="food-description">{{ item.description }}</p>
+                    <div class="card-meta"><div class="storage-tags"></div></div>
+                    <div class="row2">
+                      <div class="quantity-level-label-wrapper">
+                        <span class="quantity-label" :class="item.quantityLevel || 'high'">{{ quantityLabels[item.quantityLevel as keyof typeof quantityLabels] || quantityLabels.high }}</span>
+                      </div>
+                      <div class="quantity-level-label-wrapper">
+                        <div class="usage-bar"><div class="usage-fill" :class="item.quantityLevel || 'high'" :style="{ width: quantityWidths[item.quantityLevel as keyof typeof quantityWidths] || quantityWidths.high }"></div></div>
                       </div>
                     </div>
-                  </div>
-
-                  <div class="food-extra-actions">
-                    <button class="mini-btn delete-item" @click="requestDeleteItem(item.id)">
-                      <i class="bi bi-trash"></i> Delete
-                    </button>
-                    <button class="mini-btn use-item" @click="openUseModal(item.id)">
-                      <i class="bi bi-check"></i> Use
-                    </button>
-                    <button class="mini-btn donate-mini" @click="singleDonate(item.id)">
-                      <i class="bi bi-gift"></i> Donate
-                    </button>
+                    <div class="food-extra-actions">
+                      <button class="mini-btn delete-item" @click="requestDeleteItem(item.id)"><i class="bi bi-trash"></i> Delete</button>
+                      <button class="mini-btn use-item" @click="openUseModal(item.id)"><i class="bi bi-check"></i> Use</button>
+                      <button class="mini-btn donate-mini" @click="singleDonate(item.id)"><i class="bi bi-gift"></i> Donate</button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          </template>
 
-          <!-- PANTRY CATEGORY -->
-          <div
-            class="storage-category"
-            :class="{ expanded: expandedCategories.pantry }"
-            id="pantryCategory"
-          >
-            <div class="category-header" @click="toggleCategory('pantry')">
-              <div class="cat-title">
-                <i class="bi bi-bookshelf"></i>
-                <h2>Pantry</h2>
-                <div class="cat-badge">{{ getCategoryCount('pantry') }} items</div>
-              </div>
-              <div class="expand-cat-icon"><i class="bi bi-chevron-down"></i></div>
-            </div>
-            <div class="category-items">
-              <div class="food-grid" data-category="pantry" id="pantryGrid">
-                <div
-                  v-for="item in getFilteredAndSortedItems('pantry')"
-                  :key="item.id"
-                  class="food-item-card"
-                  :class="{
-                    'selected-for-donation': selectedDonationIds.has(item.id),
-                    'hidden-by-search': isHiddenBySearch(item),
-                  }"
-                  :data-food-id="item.id"
-                  :data-food-name="item.name"
-                  :data-search-terms="`${item.name} ${item.volume} ${item.foodType} ${item.description} ${item.searchTerms}`"
-                  :data-category="item.category"
-                >
-                  <div class="checkbox-overlay">
-                    <input
-                      type="checkbox"
-                      class="donation-checkbox"
-                      :checked="selectedDonationIds.has(item.id)"
-                      @change="toggleDonationSelection(item.id)"
-                    />
-                  </div>
-
-                  <div class="card-header">
-                    <div class="card-title-section">
-                      <h3 class="food-title">{{ escapeHtml(item.name) }}</h3>
-
-                      <div class="row3">
-                        <span v-if="item.expiryDays <= 3" class="expiry-badge urgent">
-                          <i class="bi bi-exclamation-triangle"></i> expires in
-                          {{ item.expiryDays }}d
-                        </span>
-                        <span v-else class="expiry-badge">
-                          <i class="bi bi-clock"></i> {{ item.expiryDays }}d left
-                        </span>
-                      </div>
-                      <div class="row5">
-                        <span class="tag storage-tag">{{ item.category }}</span>
-                        <span class="tag type-tag">{{ item.foodType }}</span>
-                        <span class="volume-badge">{{ item.volume }}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <p class="food-description">{{ item.description }}</p>
-
-                  <div class="card-meta">
-                    <div class="storage-tags"></div>
-                  </div>
-
-                  <div class="row2">
-                    <div class="quantity-level-label-wrapper">
-                      <span class="quantity-label" :class="item.quantityLevel || 'high'">{{
-                        quantityLabels[item.quantityLevel as keyof typeof quantityLabels] ||
-                        quantityLabels.high
-                      }}</span>
-                    </div>
-                    <div class="quantity-level-label-wrapper">
-                      <div class="usage-bar">
-                        <div
-                          class="usage-fill"
-                          :class="item.quantityLevel || 'high'"
-                          :style="{
-                            width:
-                              quantityWidths[item.quantityLevel as keyof typeof quantityWidths] ||
-                              quantityWidths.high,
-                          }"
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="food-extra-actions">
-                    <button class="mini-btn delete-item" @click="requestDeleteItem(item.id)">
-                      <i class="bi bi-trash"></i> Delete
-                    </button>
-                    <button class="mini-btn use-item" @click="openUseModal(item.id)">
-                      <i class="bi bi-check"></i> Use
-                    </button>
-                    <button class="mini-btn donate-mini" @click="singleDonate(item.id)">
-                      <i class="bi bi-gift"></i> Donate
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- FREEZER CATEGORY -->
-          <div
-            class="storage-category"
-            :class="{ expanded: expandedCategories.freezer }"
-            id="freezerCategory"
-          >
-            <div class="category-header" @click="toggleCategory('freezer')">
-              <div class="cat-title">
-                <i class="bi bi-snow"></i>
-                <h2>Freezer</h2>
-                <div class="cat-badge">{{ getCategoryCount('freezer') }} items</div>
-              </div>
-              <div class="expand-cat-icon"><i class="bi bi-chevron-down"></i></div>
-            </div>
-            <div class="category-items">
-              <div class="food-grid" data-category="freezer" id="freezerGrid">
-                <div
-                  v-for="item in getFilteredAndSortedItems('freezer')"
-                  :key="item.id"
-                  class="food-item-card"
-                  :class="{
-                    'selected-for-donation': selectedDonationIds.has(item.id),
-                    'hidden-by-search': isHiddenBySearch(item),
-                  }"
-                  :data-food-id="item.id"
-                  :data-food-name="item.name"
-                  :data-search-terms="`${item.name} ${item.volume} ${item.foodType} ${item.description} ${item.searchTerms}`"
-                  :data-category="item.category"
-                >
-                  <div class="checkbox-overlay">
-                    <input
-                      type="checkbox"
-                      class="donation-checkbox"
-                      :checked="selectedDonationIds.has(item.id)"
-                      @change="toggleDonationSelection(item.id)"
-                    />
-                  </div>
-
-                  <div class="card-header">
-                    <div class="card-title-section">
-                      <h3 class="food-title">{{ escapeHtml(item.name) }}</h3>
-
-                      <div class="row3">
-                        <span v-if="item.expiryDays <= 3" class="expiry-badge urgent">
-                          <i class="bi bi-exclamation-triangle"></i> expires in
-                          {{ item.expiryDays }}d
-                        </span>
-                        <span v-else class="expiry-badge">
-                          <i class="bi bi-clock"></i> {{ item.expiryDays }}d left
-                        </span>
-                      </div>
-                      <div class="row5">
-                        <span class="tag storage-tag">{{ item.category }}</span>
-                        <span class="tag type-tag">{{ item.foodType }}</span>
-                        <span class="volume-badge">{{ item.volume }}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <p class="food-description">{{ item.description }}</p>
-
-                  <div class="card-meta">
-                    <div class="storage-tags"></div>
-                  </div>
-
-                  <div class="row2">
-                    <div class="quantity-level-label-wrapper">
-                      <span class="quantity-label" :class="item.quantityLevel || 'high'">{{
-                        quantityLabels[item.quantityLevel as keyof typeof quantityLabels] ||
-                        quantityLabels.high
-                      }}</span>
-                    </div>
-                    <div class="quantity-level-label-wrapper">
-                      <div class="usage-bar">
-                        <div
-                          class="usage-fill"
-                          :class="item.quantityLevel || 'high'"
-                          :style="{
-                            width:
-                              quantityWidths[item.quantityLevel as keyof typeof quantityWidths] ||
-                              quantityWidths.high,
-                          }"
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="food-extra-actions">
-                    <button class="mini-btn delete-item" @click="requestDeleteItem(item.id)">
-                      <i class="bi bi-trash"></i> Delete
-                    </button>
-                    <button class="mini-btn use-item" @click="openUseModal(item.id)">
-                      <i class="bi bi-check"></i> Use
-                    </button>
-                    <button class="mini-btn donate-mini" @click="singleDonate(item.id)">
-                      <i class="bi bi-gift"></i> Donate
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- COUNTERTOP CATEGORY -->
-          <div
-            class="storage-category"
-            :class="{ expanded: expandedCategories.countertop }"
-            id="counterCategory"
-          >
-            <div class="category-header" @click="toggleCategory('countertop')">
-              <div class="cat-title">
-                <i class="bi bi-cup-hot"></i>
-                <h2>Countertop</h2>
-                <div class="cat-badge">{{ getCategoryCount('countertop') }} items</div>
-              </div>
-              <div class="expand-cat-icon"><i class="bi bi-chevron-down"></i></div>
-            </div>
-            <div class="category-items">
-              <div class="food-grid" data-category="countertop" id="counterGrid">
-                <div
-                  v-for="item in getFilteredAndSortedItems('countertop')"
-                  :key="item.id"
-                class="food-item-card"
-                  :class="{
-                    'selected-for-donation': selectedDonationIds.has(item.id),
-                    'hidden-by-search': isHiddenBySearch(item),
-                  }"
-                  :data-food-id="item.id"
-                  :data-food-name="item.name"
-                  :data-search-terms="`${item.name} ${item.volume} ${item.foodType} ${item.description} ${item.searchTerms}`"
-                  :data-category="item.category"
-                >
-                  <div class="checkbox-overlay">
-                    <input
-                      type="checkbox"
-                      class="donation-checkbox"
-                      :checked="selectedDonationIds.has(item.id)"
-                      @change="toggleDonationSelection(item.id)"
-                    />
-                  </div>
-
-                  <div class="card-header">
-                    <div class="card-title-section">
-                      <h3 class="food-title">{{ escapeHtml(item.name) }}</h3>
-
-                      <div class="row3">
-                        <span v-if="item.expiryDays <= 3" class="expiry-badge urgent">
-                          <i class="bi bi-exclamation-triangle"></i> expires in
-                          {{ item.expiryDays }}d
-                        </span>
-                        <span v-else class="expiry-badge">
-                          <i class="bi bi-clock"></i> {{ item.expiryDays }}d left
-                        </span>
-                      </div>
-                      <div class="row5">
-                        <span class="tag storage-tag">{{ item.category }}</span>
-                        <span class="tag type-tag">{{ item.foodType }}</span>
-                        <span class="volume-badge">{{ item.volume }}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <p class="food-description">{{ item.description }}</p>
-
-                  <div class="card-meta">
-                    <div class="storage-tags"></div>
-                  </div>
-
-                  <div class="row2">
-                    <div class="quantity-level-label-wrapper">
-                      <span class="quantity-label" :class="item.quantityLevel || 'high'">{{
-                        quantityLabels[item.quantityLevel as keyof typeof quantityLabels] ||
-                        quantityLabels.high
-                      }}</span>
-                    </div>
-                    <div class="quantity-level-label-wrapper">
-                      <div class="usage-bar">
-                        <div
-                          class="usage-fill"
-                          :class="item.quantityLevel || 'high'"
-                          :style="{
-                            width:
-                              quantityWidths[item.quantityLevel as keyof typeof quantityWidths] ||
-                              quantityWidths.high,
-                          }"
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="food-extra-actions">
-                    <button class="mini-btn delete-item" @click="requestDeleteItem(item.id)">
-                      <i class="bi bi-trash"></i> Delete
-                    </button>
-                    <button class="mini-btn use-item" @click="openUseModal(item.id)">
-                      <i class="bi bi-check"></i> Use
-                    </button>
-                    <button class="mini-btn donate-mini" @click="singleDonate(item.id)">
-                      <i class="bi bi-gift"></i> Donate
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- NEAR EXPIRY CATEGORY -->
-          <div
-            class="storage-category"
-            :class="{ expanded: expandedCategories.expiry }"
-            id="expiryCategory"
-          >
+          <!-- NEAR EXPIRY (shown when Near Expiry filter is OFF) -->
+          <div v-if="!activeNearExpiry" class="storage-category" :class="{ expanded: expandedCategories.expiry }" id="expiryCategory">
             <div class="category-header" @click="toggleCategory('expiry')">
-              <div class="cat-title">
-                <i class="bi bi-exclamation-triangle"></i>
-                <h2>Near Expiry</h2>
-                <div class="cat-badge">{{ getNearExpiryCount() }} items</div>
-              </div>
+              <div class="cat-title"><i class="bi bi-exclamation-triangle"></i><h2>Near Expiry</h2><div class="cat-badge">{{ getNearExpiryCount() }} items</div></div>
               <div class="expand-cat-icon"><i class="bi bi-chevron-down"></i></div>
             </div>
             <div class="category-items">
               <div class="food-grid" id="expiryGrid">
-                <div
-                  v-for="item in getNearExpiryItems()"
-                  :key="item.id"
-                  class="food-item-card"
-                  :class="{
-                    'selected-for-donation': selectedDonationIds.has(item.id),
-                    'hidden-by-search': isHiddenBySearch(item),
-                  }"
-                  :data-food-id="item.id"
-                  :data-food-name="item.name"
-                  :data-search-terms="`${item.name} ${item.volume} ${item.foodType} ${item.description} ${item.searchTerms}`"
-                  :data-category="item.category"
-                >
-                  <div class="checkbox-overlay">
-                    <input
-                      type="checkbox"
-                      class="donation-checkbox"
-                      :checked="selectedDonationIds.has(item.id)"
-                      @change="toggleDonationSelection(item.id)"
-                    />
-                  </div>
-
-                  <div class="card-header">
-                    <div class="card-title-section">
-                      <h3 class="food-title">{{ escapeHtml(item.name) }}</h3>
-
-                      <div class="row3">
-                        <span v-if="item.expiryDays <= 3" class="expiry-badge urgent">
-                          <i class="bi bi-exclamation-triangle"></i> expires in
-                          {{ item.expiryDays }}d
-                        </span>
-                        <span v-else class="expiry-badge">
-                          <i class="bi bi-clock"></i> {{ item.expiryDays }}d left
-                        </span>
-                      </div>
-                      <div class="row5">
-                        <span class="tag storage-tag">{{ item.category }}</span>
-                        <span class="tag type-tag">{{ item.foodType }}</span>
-                        <span class="volume-badge">{{ item.volume }}</span>
-                      </div>
+                <div v-for="item in getNearExpiryItems()" :key="item.id"
+                  class="food-item-card" :class="{ 'selected-for-donation': selectedDonationIds.has(item.id) }"
+                  :data-food-id="item.id">
+                  <div class="checkbox-overlay"><input type="checkbox" class="donation-checkbox" :checked="selectedDonationIds.has(item.id)" @change="toggleDonationSelection(item.id)" /></div>
+                  <div class="card-header"><div class="card-title-section">
+                    <h3 class="food-title">{{ escapeHtml(item.name) }}</h3>
+                    <div class="row3">
+                      <span v-if="item.isExpired" class="expiry-badge expired"><i class="bi bi-x-circle"></i> Expired</span>
+                      <span v-else class="expiry-badge urgent"><i class="bi bi-exclamation-triangle"></i> expires in {{ item.expiryDays }}d</span>
                     </div>
-                  </div>
-
+                    <div class="row5">
+                      <span class="tag storage-tag">{{ item.category }}</span>
+                      <span class="tag type-tag">{{ item.foodType }}</span>
+                      <span class="volume-badge">{{ item.volume }}</span>
+                    </div>
+                  </div></div>
                   <p class="food-description">{{ item.description }}</p>
-
-                  <div class="card-meta">
-                    <div class="storage-tags"></div>
-                  </div>
-
                   <div class="row2">
                     <div class="quantity-level-label-wrapper">
-                      <span class="quantity-label" :class="item.quantityLevel || 'high'">{{
-                        quantityLabels[item.quantityLevel as keyof typeof quantityLabels] ||
-                        quantityLabels.high
-                      }}</span>
+                      <span class="quantity-label" :class="item.quantityLevel || 'high'">{{ quantityLabels[item.quantityLevel as keyof typeof quantityLabels] || quantityLabels.high }}</span>
                     </div>
                     <div class="quantity-level-label-wrapper">
-                      <div class="usage-bar">
-                        <div
-                          class="usage-fill"
-                          :class="item.quantityLevel || 'high'"
-                          :style="{
-                            width:
-                              quantityWidths[item.quantityLevel as keyof typeof quantityWidths] ||
-                              quantityWidths.high,
-                          }"
-                        ></div>
-                      </div>
+                      <div class="usage-bar"><div class="usage-fill" :class="item.quantityLevel || 'high'" :style="{ width: quantityWidths[item.quantityLevel as keyof typeof quantityWidths] || quantityWidths.high }"></div></div>
                     </div>
                   </div>
-
                   <div class="food-extra-actions">
-                    <button class="mini-btn delete-item" @click="requestDeleteItem(item.id)">
-                      <i class="bi bi-trash"></i> Delete
-                    </button>
-                    <button class="mini-btn use-item" @click="openUseModal(item.id)">
-                      <i class="bi bi-check"></i> Use
-                    </button>
-                    <button class="mini-btn donate-mini" @click="singleDonate(item.id)">
-                      <i class="bi bi-gift"></i> Donate
-                    </button>
+                    <button class="mini-btn delete-item" @click="requestDeleteItem(item.id)"><i class="bi bi-trash"></i> Delete</button>
+                    <button class="mini-btn use-item" @click="openUseModal(item.id)"><i class="bi bi-check"></i> Use</button>
+                    <button class="mini-btn donate-mini" @click="singleDonate(item.id)"><i class="bi bi-gift"></i> Donate</button>
                   </div>
                 </div>
-                <div
-                  v-if="getNearExpiryItems().length === 0"
-                  style="padding: 20px; text-align: center; color: #7e95b0"
-                >
-                  No items near expiry! keep up the good work managing your food.
-                </div>
+                <div v-if="getNearExpiryItems().length === 0" style="padding:20px;text-align:center;color:#7e95b0">No items near expiry! Keep up the good work.</div>
               </div>
             </div>
           </div>
@@ -1043,11 +567,11 @@ manage inventory
                     <span class="compact-food-name">{{ item.name }}</span>
                   </span>
                   <span class="compact-food-meta">
-                    <span :class="{ urgent: item.expiryDays <= 3 }">
+                    <span :class="{ urgent: item.isExpired || item.expiryDays <= 3 }">
                       <i
-                        :class="item.expiryDays <= 3 ? 'bi bi-exclamation-triangle' : 'bi bi-clock'"
+                        :class="item.isExpired ? 'bi bi-x-circle' : item.expiryDays <= 3 ? 'bi bi-exclamation-triangle' : 'bi bi-clock'"
                       ></i>
-                      {{ item.expiryDays }}d left
+                      {{ item.isExpired ? 'Expired' : item.expiryDays + 'd left' }}
                     </span>
 
                     <span :class="['compact-quantity', item.quantityLevel || 'high']">
@@ -1071,40 +595,70 @@ manage inventory
       <aside class="right-sidebar">
         <div class="right-box">
           <div class="bulk-select-controls">
-            <span class="selection-count" id="selectionCount"
-              >{{ selectedDonationIds.size }} selected</span
-            >
-            <button class="right-btn" id="selectAllBtn" @click="selectAllVisible">
-              <i class="bi bi-check2-all"></i> Select All
-            </button>
-            <button class="right-btn" id="clearSelectionBtn" @click="clearAllSelections">
-              <i class="bi bi-x"></i> Clear
-            </button>
+            <span class="selection-count" id="selectionCount">{{ selectedDonationIds.size }} selected</span>
+            <button class="right-btn" id="selectAllBtn" @click="selectAllVisible"><i class="bi bi-check2-all"></i> Select All</button>
+            <button class="right-btn" id="clearSelectionBtn" @click="clearAllSelections"><i class="bi bi-x"></i> Clear</button>
           </div>
-
-          <button class="right-btn" id="filterBtn" @click="cycleFilterMode">
-            <i class="bi bi-funnel"></i> Filter: {{ getFilterLabel(currentFilter) }}
-          </button>
           <button class="right-btn" id="sortBtn" @click="cycleSortMode">
             <i class="bi bi-arrow-down-up"></i> Sort: {{ getSortLabel(currentSort) }}
           </button>
         </div>
 
+        <div class="right-box filters-dropdown-wrap">
+          <button class="filter-dropdown-trigger" @click="filtersOpen = !filtersOpen" :class="{ active: hasActiveFilters }">
+            <div class="trigger-left">
+              <i class="bi bi-funnel-fill"></i>
+              <span>Filters</span>
+              <div v-if="activeFilterCount > 0" class="filter-count-badge">{{ activeFilterCount }}</div>
+            </div>
+            <i class="bi" :class="filtersOpen ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+          </button>
+
+          <Transition name="fade-slide">
+            <div v-if="filtersOpen" class="filter-dropdown-menu">
+              <div class="filter-panel-header">
+                <span class="filter-panel-title">Refine Results</span>
+                <button v-if="hasActiveFilters" class="filter-clear-btn" @click="clearAllFilters">
+                  <i class="bi bi-arrow-counterclockwise"></i> Reset
+                </button>
+              </div>
+
+              <div class="filter-group">
+                <div class="filter-group-label">Status</div>
+                <button class="filter-chip" :class="{ active: activeNearExpiry }" @click="activeNearExpiry = !activeNearExpiry">
+                  <i class="bi bi-exclamation-triangle"></i> Near Expiry
+                </button>
+              </div>
+
+              <div class="filter-group">
+                <div class="filter-group-label">Storage Location</div>
+                <div class="filter-chip-grid">
+                  <button v-for="loc in [{ key:'fridge',label:'Fridge',icon:'bi bi-thermometer-low'},{ key:'freezer',label:'Freezer',icon:'bi bi-snow'},{ key:'pantry',label:'Pantry',icon:'bi bi-bookshelf'},{ key:'countertop',label:'Counter',icon:'bi bi-cup-hot'}]" :key="loc.key"
+                    class="filter-chip" :class="{ active: activeLocations.has(loc.key) }" @click="toggleLocationFilter(loc.key)">
+                    <i :class="loc.icon"></i> {{ loc.label }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="filter-group">
+                <div class="filter-group-label">Food Type</div>
+                <div class="filter-chip-grid">
+                  <button v-for="type in foodTypeOptions" :key="type"
+                    class="filter-chip" :class="{ active: activeFoodTypes.has(type) }" @click="toggleFoodTypeFilter(type)">{{ type }}</button>
+                </div>
+              </div>
+            </div>
+          </Transition>
+        </div>
+
         <div class="right-box">
-          <button
-            class="donate-bulk-btn"
-            id="donateBulkBtn"
-            :disabled="selectedDonationIds.size === 0"
-            @click="bulkDonateAction"
-          >
+          <button class="donate-bulk-btn" id="donateBulkBtn" :disabled="selectedDonationIds.size === 0" @click="bulkDonateAction">
             <i class="bi bi-gift"></i> Donate Selected
           </button>
         </div>
-
         <div class="right-box">
           <button class="right-btn"><i class="bi bi-lightning"></i> Meal Plan</button>
         </div>
-
         <div class="floating-add" id="addRight" @click="openAddModal">+</div>
       </aside>
     </div>
@@ -1126,6 +680,29 @@ manage inventory
         <span>{{ item.label }}</span>
       </button>
     </nav>
+    
+    <!-- Success Popup -->
+    <Transition name="premium-popup">
+      <div v-if="showSuccessPopup" class="success-popup-overlay" @click.self="showSuccessPopup = false">
+        <div class="success-popup-card">
+          <div class="success-icon-wrap">
+            <div class="checkmark-circle">
+              <i class="bi bi-check-lg"></i>
+            </div>
+            <div class="confetti-piece"></div>
+            <div class="confetti-piece"></div>
+            <div class="confetti-piece"></div>
+            <div class="confetti-piece"></div>
+            <div class="confetti-piece"></div>
+          </div>
+          <div class="success-text">
+            <h3>Awesome!</h3>
+            <p><strong>{{ lastAddedItemName }}</strong> has been added to your inventory.</p>
+          </div>
+          <button class="success-close-btn" @click="showSuccessPopup = false">Got it</button>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -1139,6 +716,8 @@ import { auth, db } from '@/firebase'
 import {
   addFoodItem,
   deleteFoodItem,
+  logFoodAction,
+  FoodActionKind,
   markFoodAsDonated,
   markFoodAsUsed,
   updateFoodItem,
@@ -1172,6 +751,8 @@ interface InventoryItem {
   volume: string
   location: string
   expiryDays: number
+  isExpired: boolean
+  expiryDate: string
   category: string
   foodType: string
   searchTerms: string
@@ -1185,6 +766,50 @@ const currentFilter = ref('all')
 const currentSort = ref('name')
 const filterModes = ['all', 'near-expiry', 'fridge', 'pantry', 'freezer', 'countertop']
 const sortModes = ['name', 'expiry', 'category']
+
+// --- Multi-select filter state ---
+const activeLocations = ref<Set<string>>(new Set())
+const activeFoodTypes = ref<Set<string>>(new Set())
+const activeNearExpiry = ref(false)
+
+const allLocations = ['fridge', 'pantry', 'freezer', 'countertop']
+
+function toggleLocationFilter(loc: string) {
+  const s = new Set(activeLocations.value)
+  if (s.has(loc)) { s.delete(loc) } else { s.add(loc) }
+  activeLocations.value = s
+}
+
+function toggleFoodTypeFilter(type: string) {
+  const s = new Set(activeFoodTypes.value)
+  if (s.has(type)) { s.delete(type) } else { s.add(type) }
+  activeFoodTypes.value = s
+}
+
+function clearAllFilters() {
+  activeLocations.value = new Set()
+  activeFoodTypes.value = new Set()
+  activeNearExpiry.value = false
+  currentFilter.value = 'all'
+}
+
+const hasActiveFilters = computed(
+  () => activeLocations.value.size > 0 || activeFoodTypes.value.size > 0 || activeNearExpiry.value
+)
+
+const filtersOpen = ref(false)
+const activeFilterCount = computed(() => {
+  let count = 0
+  if (activeNearExpiry.value) count++
+  count += activeLocations.value.size
+  count += activeFoodTypes.value.size
+  return count
+})
+
+// Which location sections to render
+const visibleLocations = computed(() =>
+  activeLocations.value.size > 0 ? [...activeLocations.value] : allLocations
+)
 type InventoryLayout = 'cards' | 'compact'
 const inventoryLayout = ref<InventoryLayout>('cards')
 const compactStorageColumns = [
@@ -1263,13 +888,14 @@ function subscribeInventory(uid: string) {
 
 const addModalOpen = ref(false)
 const addModalSubmitting = ref(false)
+const showSuccessPopup = ref(false)
+const lastAddedItemName = ref('')
 const useModalOpen = ref(false)
 const confirmationModalOpen = ref(false)
 const currentUseItemId = ref<string | null>(null)
 const confirmationItemId = ref<string | null>(null)
 const confirmationAction = ref<'delete' | 'finish' | null>(null)
 const selectedUseQuantity = ref('high')
-// const selectedQuantityLevel = ref('low')
 const selectedStorage = ref('fridge')
 
 const newItem = ref({
@@ -1383,13 +1009,17 @@ function mapFoodToInventoryItem(item: FoodItem): InventoryItem {
     countertop: 'Countertop',
   }
 
+  const rawExpiryDate = typeof expiryDate === 'string' ? expiryDate : new Date().toISOString().slice(0, 10)
+  const days = calculateDaysUntil(rawExpiryDate)
   return {
     id: item.id,
     name: item.name || 'Unnamed Item',
     description: typeof notes === 'string' ? notes : '',
     volume,
     location: typeof storageLocation === 'string' ? storageLocation : (locationByCategory[category] || 'Storage'),
-    expiryDays: calculateDaysUntil(typeof expiryDate === 'string' ? expiryDate : new Date().toISOString().slice(0, 10)),
+    expiryDays: days,
+    isExpired: days < 0,
+    expiryDate: rawExpiryDate,
     category,
     foodType: typeof foodType === 'string' ? foodType : 'Other',
     searchTerms: String(item.name || '').toLowerCase(),
@@ -1440,61 +1070,52 @@ const useItemName = computed(() => {
 })
 
 // ---------- Helper Functions ----------
-function getFilteredAndSortedItems(category: string): InventoryItem[] {
-  let items =
-    category === 'all'
-      ? [...inventory.value]
-      : inventory.value.filter((i) => i.category === category)
-
-  if (currentFilter.value === 'near-expiry') {
+function applyFilters(items: InventoryItem[]): InventoryItem[] {
+  if (activeFoodTypes.value.size > 0)
+    items = items.filter((i) => activeFoodTypes.value.has(i.foodType))
+  if (activeNearExpiry.value)
     items = items.filter((i) => i.expiryDays <= 3)
-  } else if (['fridge', 'pantry', 'freezer', 'countertop'].includes(currentFilter.value)) {
-    items = items.filter((i) => i.category === currentFilter.value)
-  }
-
   if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    items = items.filter((item) => {
-      const combined =
-        `${item.name} ${item.volume} ${item.foodType} ${item.description} ${item.searchTerms || ''}`.toLowerCase()
-      return combined.includes(query)
-    })
+    const q = searchQuery.value.toLowerCase()
+    items = items.filter((i) =>
+      ` ${i.name} ${i.volume} ${i.foodType} ${i.description} ${i.searchTerms || ''} `.toLowerCase().includes(q)
+    )
   }
-
   items.sort((a, b) => {
     if (currentSort.value === 'expiry') return a.expiryDays - b.expiryDays
     if (currentSort.value === 'category') return a.category.localeCompare(b.category)
     return a.name.localeCompare(b.name)
   })
-
   return items
 }
 
-function getNearExpiryItems(): InventoryItem[] {
-  return inventory.value.filter((i) => i.expiryDays <= 3)
+function getFilteredAndSortedItems(category: string): InventoryItem[] {
+  let items = category === 'all' ? [...inventory.value] : inventory.value.filter((i) => i.category === category)
+  if (activeLocations.value.size > 0)
+    items = items.filter((i) => activeLocations.value.has(i.category))
+  return applyFilters(items)
 }
 
-function getNearExpiryCount(): number {
-  return getNearExpiryItems().length
+function getLocationSectionItems(location: string): InventoryItem[] {
+  return applyFilters(inventory.value.filter((i) => i.category === location))
 }
+
+function getNearExpiryItems(): InventoryItem[] {
+  let items = inventory.value.filter((i) => i.expiryDays <= 3)
+  if (activeLocations.value.size > 0) items = items.filter((i) => activeLocations.value.has(i.category))
+  if (activeFoodTypes.value.size > 0) items = items.filter((i) => activeFoodTypes.value.has(i.foodType))
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    items = items.filter((i) => ` ${i.name} ${i.volume} ${i.foodType} `.toLowerCase().includes(q))
+  }
+  return items
+}
+
+function getNearExpiryCount(): number { return getNearExpiryItems().length }
 
 function getCategoryCount(category: string): number {
-  if (category === 'all') {
-    let items = [...inventory.value]
-    if (currentFilter.value === 'near-expiry') items = items.filter((i) => i.expiryDays <= 3)
-    else if (['fridge', 'pantry', 'freezer', 'countertop'].includes(currentFilter.value))
-      items = items.filter((i) => i.category === currentFilter.value)
-    if (searchQuery.value) {
-      const q = searchQuery.value.toLowerCase()
-      items = items.filter((item) =>
-        `${item.name} ${item.volume} ${item.foodType} ${item.description} ${item.searchTerms}`
-          .toLowerCase()
-          .includes(q),
-      )
-    }
-    return items.length
-  }
-  return getFilteredAndSortedItems(category).length
+  if (category === 'all') return getFilteredAndSortedItems('all').length
+  return getLocationSectionItems(category).length
 }
 
 function isHiddenBySearch(item: InventoryItem): boolean {
@@ -1516,6 +1137,7 @@ function closeMobileFilterModal() {
 }
 
 function resetMobileFilters() {
+  clearAllFilters()
   currentFilter.value = 'all'
   currentSort.value = 'name'
 }
@@ -1561,7 +1183,22 @@ function requestDeleteItem(id: string) {
 }
 
 async function deleteItem(id: string) {
+  const item = inventory.value.find((i) => i.id === id)
   try {
+    // Log as wasted if the item is already expired
+    if (item && item.isExpired && currentUid.value) {
+      await logFoodAction(currentUid.value, {
+        food_id: id,
+        kind: FoodActionKind.WASTED,
+        name: item.name,
+        category: item.category,
+        food_type: item.foodType,
+        quantity: getVolumeQuantity(item.volume),
+        unit: getVolumeUnit(item.volume),
+        expiry_date: item.expiryDate,
+        was_expired: true,
+      }).catch((err) => console.error('Failed to log wasted action:', err))
+    }
     await deleteFoodItem(id)
     selectedDonationIds.value.delete(id)
     notifyMessage('Item removed.')
@@ -1594,6 +1231,21 @@ async function finishItem() {
   const item = inventory.value.find((i) => i.id === currentUseItemId.value)
   if (!item) return
   try {
+    // Log to food_actions: wasted if already expired, finished if used in time
+    if (currentUid.value) {
+      const kind = item.isExpired ? FoodActionKind.WASTED : FoodActionKind.FINISHED
+      await logFoodAction(currentUid.value, {
+        food_id: item.id,
+        kind,
+        name: item.name,
+        category: item.category,
+        food_type: item.foodType,
+        quantity: getVolumeQuantity(item.volume),
+        unit: getVolumeUnit(item.volume),
+        expiry_date: item.expiryDate,
+        was_expired: item.isExpired,
+      }).catch((err) => console.error('Failed to log food action:', err))
+    }
     await markFoodAsUsed(item.id)
     recordInventoryAnalytics(item, 'used')
     selectedDonationIds.value.delete(currentUseItemId.value)
@@ -1716,11 +1368,24 @@ function getSortLabel(sort: string): string {
   return labels[sort] || 'Name'
 }
 
-function cycleFilterMode() {
-  const idx = (filterModes.indexOf(currentFilter.value) + 1) % filterModes.length
-  currentFilter.value = filterModes[idx]!
-  notifyMessage(`Filter set to ${getFilterLabel(currentFilter.value)}.`)
+function isFilterActive(mode: string): boolean {
+  if (mode === 'all') return !hasActiveFilters.value
+  if (mode === 'near-expiry') return activeNearExpiry.value
+  return activeLocations.value.has(mode)
 }
+
+function toggleMobileFilter(mode: string) {
+  if (mode === 'all') {
+    clearAllFilters()
+    return
+  }
+  if (mode === 'near-expiry') {
+    activeNearExpiry.value = !activeNearExpiry.value
+    return
+  }
+  toggleLocationFilter(mode)
+}
+
 
 function cycleSortMode() {
   const idx = (sortModes.indexOf(currentSort.value) + 1) % sortModes.length
@@ -1728,12 +1393,34 @@ function cycleSortMode() {
   notifyMessage(`Sort set to ${getSortLabel(currentSort.value)}.`)
 }
 
+// Watch for any open modal to lock body scroll
+watch(
+  () => [
+    addModalOpen.value,
+    useModalOpen.value,
+    confirmationModalOpen.value,
+    mobileFilterModalOpen.value,
+    showSuccessPopup.value,
+  ],
+  (modalStates) => {
+    const isAnyModalOpen = modalStates.some((state) => state)
+    if (isAnyModalOpen) {
+      document.body.style.overflow = 'hidden'
+      document.body.style.paddingRight = 'var(--scrollbar-width, 0px)' // Prevent layout shift if possible
+    } else {
+      document.body.style.overflow = ''
+      document.body.style.paddingRight = ''
+    }
+  },
+)
+
 function calculateDaysUntil(dateString: string): number {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const target = new Date(`${dateString}T00:00:00`)
   target.setHours(0, 0, 0, 0)
-  return Math.max(0, Math.ceil((target.getTime() - today.getTime()) / 86400000))
+  // Allow negative values so we can detect expired items (expiryDays < 0)
+  return Math.ceil((target.getTime() - today.getTime()) / 86400000)
 }
 
 function formatDisplayDate(dateString: string): string {
@@ -1923,7 +1610,13 @@ async function confirmAdd() {
   }
 
   closeAddModal()
-  notifyMessage(`Successfully added "${itemName}" to the database.`)
+  lastAddedItemName.value = itemName
+  showSuccessPopup.value = true
+  
+  // Auto-hide after 4 seconds
+  setTimeout(() => {
+    showSuccessPopup.value = false
+  }, 4000)
 
   // Ensure the new item is visible after add
   const visibleUnderCurrentFilter =
@@ -2001,7 +1694,7 @@ function notifyMessage(msg: string) {
   top: 24px;
   align-self: start;
   max-height: calc(100vh - 48px);
-  overflow-y: auto;
+  z-index: 1000;
 }
 
 /* SIDEBAR */
@@ -2607,7 +2300,7 @@ hr {
   position: absolute;
   top: 20px;
   right: 20px;
-  z-index: 5;
+  z-index: 1;
 }
 
 .donation-checkbox {
@@ -2673,6 +2366,14 @@ hr {
   background: #fff1e8;
   padding: 4px 10px;
   border-radius: 20px;
+}
+
+.expiry-badge.expired {
+  color: #991b1b;
+  background: #fee2e2;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 700;
 }
 
 .card-badges {
@@ -3073,8 +2774,9 @@ footer {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(10, 28, 47, 0.35);
-  display: none;
+  background: rgba(10, 28, 47, 0.4);
+  backdrop-filter: blur(8px);
+  display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
@@ -4405,4 +4107,345 @@ footer {
     gap: 14px;
   }
 }
+
+.filters-dropdown-wrap {
+  position: relative;
+  z-index: 2000;
+}
+
+.filter-dropdown-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: white;
+  border: 2px solid #f1f3f6;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #1e3a2f;
+}
+
+.filter-dropdown-trigger:hover {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+
+.filter-dropdown-trigger.active {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.trigger-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.filter-count-badge {
+  background: #166534;
+  color: white;
+  font-size: 0.7rem;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.filter-dropdown-menu {
+  position: absolute;
+  top: 0;
+  right: calc(100% + 20px);
+  width: 320px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 28px;
+  box-shadow: -20px 20px 60px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0,0,0,0.02);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  z-index: 99999;
+}
+
+/* Arrow indicator */
+.filter-dropdown-menu::after {
+  content: '';
+  position: absolute;
+  top: 20px;
+  right: -10px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  transform: rotate(45deg);
+  border-right: 1px solid rgba(255, 255, 255, 0.6);
+  border-top: 1px solid rgba(255, 255, 255, 0.6);
+  z-index: -1;
+}
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateX(20px) scale(0.95);
+}
+
+.filter-panel-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+
+.filter-clear-btn {
+  font-size: 0.72rem;
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: all 0.2s;
+  font-weight: 600;
+}
+.filter-clear-btn:hover { background: #fef2f2; }
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-group-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+}
+
+.filter-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1.5px solid #f1f5f9;
+  background: #f8fafc;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.filter-chip:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+  color: #1e293b;
+  transform: translateY(-1px);
+}
+
+.filter-chip.active {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #065f46;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateX(20px) scale(0.95);
+}
+
+/* Success Popup Premium Styles */
+.success-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(10, 28, 47, 0.4);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.success-popup-card {
+  background: white;
+  padding: 40px;
+  border-radius: 40px;
+  text-align: center;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.success-icon-wrap {
+  position: relative;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.checkmark-circle {
+  width: 80px;
+  height: 80px;
+  background: #2c7a4d;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 40px;
+  animation: pop-bounce 0.6s cubic-bezier(0.17, 0.67, 0.83, 1.5);
+}
+
+.success-text h3 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin-bottom: 12px;
+  color: #0a1c2f;
+}
+
+.success-text p {
+  color: #5f7f9e;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 30px;
+}
+
+.success-close-btn {
+  background: #2c7a4d;
+  color: white;
+  border: none;
+  padding: 14px 40px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.success-close-btn:hover {
+  background: #215d3a;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(44, 122, 77, 0.2);
+}
+
+/* Animations */
+@keyframes pop-bounce {
+  0% { transform: scale(0); }
+  80% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.premium-popup-enter-active,
+.premium-popup-leave-active {
+  transition: opacity 0.5s ease;
+}
+
+.premium-popup-enter-active .success-popup-card,
+.premium-popup-leave-active .success-popup-card {
+  transition: transform 0.5s cubic-bezier(0.2, 1, 0.3, 1);
+}
+
+.premium-popup-enter-from,
+.premium-popup-leave-to {
+  opacity: 0;
+}
+
+.premium-popup-enter-from .success-popup-card,
+.premium-popup-leave-to .success-popup-card {
+  transform: scale(0.9) translateY(20px);
+}
+
+/* Modal Animations */
+.premium-modal-enter-active,
+.premium-modal-leave-active {
+  transition: opacity 0.4s ease;
+}
+
+.premium-modal-enter-active .modal-box,
+.premium-modal-leave-active .modal-box {
+  transition: transform 0.5s cubic-bezier(0.2, 1, 0.3, 1);
+}
+
+.premium-modal-enter-from,
+.premium-modal-leave-to {
+  opacity: 0;
+}
+
+.premium-modal-enter-from .modal-box,
+.premium-modal-leave-to .modal-box {
+  transform: scale(0.9) translateY(30px);
+}
+
+/* Confetti mini-effect */
+.confetti-piece {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  opacity: 0;
+}
+
+.checkmark-circle ~ .confetti-piece {
+  animation: confetti-burst 0.8s ease-out forwards;
+}
+
+@keyframes confetti-burst {
+  0% { transform: translate(0, 0); opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) rotate(var(--tr)); opacity: 0; }
+}
+
+.confetti-piece:nth-child(2) { --tx: -40px; --ty: -40px; --tr: 45deg; background: #2c7a4d; left: 50%; top: 50%; }
+.confetti-piece:nth-child(3) { --tx: 40px; --ty: -30px; --tr: -30deg; background: #4ade80; left: 50%; top: 50%; }
+.confetti-piece:nth-child(4) { --tx: -30px; --ty: 40px; --tr: 120deg; background: #22c55e; left: 50%; top: 50%; }
+.confetti-piece:nth-child(5) { --tx: 50px; --ty: 20px; --tr: 80deg; background: #166534; left: 50%; top: 50%; }
+.confetti-piece:nth-child(6) { --tx: 0px; --ty: -60px; --tr: 10deg; background: #2c7a4d; left: 50%; top: 50%; }
 </style>
+
+
+
+
+
+

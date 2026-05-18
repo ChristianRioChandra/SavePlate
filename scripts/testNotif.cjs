@@ -1,3 +1,5 @@
+/* eslint-disable */
+
 // scripts/testNotif.cjs
 const admin = require('firebase-admin');
 const fs = require('fs');

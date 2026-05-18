@@ -7,7 +7,7 @@ import {
   orderBy,
 } from 'firebase/firestore'
 import { db } from '../firebase'
-import { FoodStatus } from './foodService'
+import { FoodStatus, FoodActionKind } from './foodService'
 import { ListingStatus } from './donationService'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -104,6 +104,30 @@ export async function getWasteAvoidedStats(uid: string): Promise<WasteAvoidedSta
       donated: wasteAvoided.filter(i => i['status'] === FoodStatus.DONATED).length,
     },
   }
+}
+
+// ─── Wasted Stats (from food_actions collection) ───────────────────────────────
+
+export interface WastedItemStats {
+  totalWasted: number
+  totalFinished: number
+  wasteRate: number // 0-1 ratio of wasted to total actions
+}
+
+export async function getWastedItemStats(uid: string): Promise<WastedItemStats> {
+  const q = query(
+    collection(db, 'food_actions'),
+    where('user_id', '==', uid),
+  )
+  const snap = await getDocs(q)
+  const actions = snap.docs.map(d => d.data())
+
+  const totalWasted = actions.filter(a => a['kind'] === FoodActionKind.WASTED).length
+  const totalFinished = actions.filter(a => a['kind'] === FoodActionKind.FINISHED).length
+  const total = totalWasted + totalFinished
+  const wasteRate = total === 0 ? 0 : totalWasted / total
+
+  return { totalWasted, totalFinished, wasteRate }
 }
 
 // ─── Monthly Breakdown ────────────────────────────────────────────────────────
