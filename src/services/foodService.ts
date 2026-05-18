@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../firebase'
 
+
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
 export const FoodStatus = {
@@ -44,6 +45,13 @@ export const QuantityLevel = {
 
 export type QuantityLevelValue = (typeof QuantityLevel)[keyof typeof QuantityLevel]
 
+export const FoodActionKind = {
+  FINISHED: 'finished',
+  WASTED: 'wasted',
+} as const
+
+export type FoodActionKindValue = (typeof FoodActionKind)[keyof typeof FoodActionKind]
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface AddFoodItemPayload {
@@ -66,7 +74,26 @@ export interface FoodItem extends AddFoodItemPayload {
   created_at: unknown       // Firestore Timestamp
 }
 
+export interface LogFoodActionPayload {
+  food_id: string
+  name: string
+  category: string
+  food_type: string
+  quantity: number
+  unit: string
+  expiry_date: string
+  was_expired: boolean
+  kind: FoodActionKindValue
+}
+
+export interface FoodAction extends LogFoodActionPayload {
+  id: string
+  user_id: string
+  actioned_at: unknown // Firestore Timestamp
+}
+
 const FOOD_COL = 'food'
+const FOOD_ACTIONS_COL = 'food_actions'
 
 // ─── Add Food Item ────────────────────────────────────────────────────────────
 
@@ -120,6 +147,36 @@ export async function updateFoodItem(
   updates: Partial<FoodItem>
 ): Promise<void> {
   await updateDoc(doc(db, FOOD_COL, foodId), updates)
+}
+
+// ─── Log Food Action (finished / wasted) ─────────────────────────────────────
+
+export async function logFoodAction(
+  uid: string,
+  payload: LogFoodActionPayload,
+): Promise<string> {
+  const docRef = await addDoc(collection(db, FOOD_ACTIONS_COL), {
+    user_id: uid,
+    ...payload,
+    actioned_at: serverTimestamp(),
+  })
+  return docRef.id
+}
+
+// ─── Get Food Actions for User ────────────────────────────────────────────────
+
+export async function getFoodActions(
+  uid: string,
+  kind?: FoodActionKindValue,
+): Promise<FoodAction[]> {
+  const constraints = [
+    where('user_id', '==', uid),
+    orderBy('actioned_at', 'desc'),
+  ]
+  if (kind) constraints.splice(1, 0, where('kind', '==', kind))
+  const q = query(collection(db, FOOD_ACTIONS_COL), ...constraints)
+  const snap = await getDocs(q)
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as FoodAction))
 }
 
 // ─── Delete Food Item ─────────────────────────────────────────────────────────

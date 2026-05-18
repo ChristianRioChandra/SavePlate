@@ -412,7 +412,8 @@
                   <div class="card-header"><div class="card-title-section">
                     <h3 class="food-title">{{ escapeHtml(item.name) }}</h3>
                     <div class="row3">
-                      <span v-if="item.expiryDays <= 3" class="expiry-badge urgent"><i class="bi bi-exclamation-triangle"></i> expires in {{ item.expiryDays }}d</span>
+                      <span v-if="item.isExpired" class="expiry-badge expired"><i class="bi bi-x-circle"></i> Expired</span>
+                      <span v-else-if="item.expiryDays <= 3" class="expiry-badge urgent"><i class="bi bi-exclamation-triangle"></i> expires in {{ item.expiryDays }}d</span>
                       <span v-else class="expiry-badge"><i class="bi bi-clock"></i> {{ item.expiryDays }}d left</span>
                     </div>
                     <div class="row5">
@@ -464,7 +465,8 @@
                     <div class="card-header"><div class="card-title-section">
                       <h3 class="food-title">{{ escapeHtml(item.name) }}</h3>
                       <div class="row3">
-                        <span v-if="item.expiryDays <= 3" class="expiry-badge urgent"><i class="bi bi-exclamation-triangle"></i> expires in {{ item.expiryDays }}d</span>
+                        <span v-if="item.isExpired" class="expiry-badge expired"><i class="bi bi-x-circle"></i> Expired</span>
+                        <span v-else-if="item.expiryDays <= 3" class="expiry-badge urgent"><i class="bi bi-exclamation-triangle"></i> expires in {{ item.expiryDays }}d</span>
                         <span v-else class="expiry-badge"><i class="bi bi-clock"></i> {{ item.expiryDays }}d left</span>
                       </div>
                       <div class="row5">
@@ -508,7 +510,10 @@
                   <div class="checkbox-overlay"><input type="checkbox" class="donation-checkbox" :checked="selectedDonationIds.has(item.id)" @change="toggleDonationSelection(item.id)" /></div>
                   <div class="card-header"><div class="card-title-section">
                     <h3 class="food-title">{{ escapeHtml(item.name) }}</h3>
-                    <div class="row3"><span class="expiry-badge urgent"><i class="bi bi-exclamation-triangle"></i> expires in {{ item.expiryDays }}d</span></div>
+                    <div class="row3">
+                      <span v-if="item.isExpired" class="expiry-badge expired"><i class="bi bi-x-circle"></i> Expired</span>
+                      <span v-else class="expiry-badge urgent"><i class="bi bi-exclamation-triangle"></i> expires in {{ item.expiryDays }}d</span>
+                    </div>
                     <div class="row5">
                       <span class="tag storage-tag">{{ item.category }}</span>
                       <span class="tag type-tag">{{ item.foodType }}</span>
@@ -562,11 +567,11 @@
                     <span class="compact-food-name">{{ item.name }}</span>
                   </span>
                   <span class="compact-food-meta">
-                    <span :class="{ urgent: item.expiryDays <= 3 }">
+                    <span :class="{ urgent: item.isExpired || item.expiryDays <= 3 }">
                       <i
-                        :class="item.expiryDays <= 3 ? 'bi bi-exclamation-triangle' : 'bi bi-clock'"
+                        :class="item.isExpired ? 'bi bi-x-circle' : item.expiryDays <= 3 ? 'bi bi-exclamation-triangle' : 'bi bi-clock'"
                       ></i>
-                      {{ item.expiryDays }}d left
+                      {{ item.isExpired ? 'Expired' : item.expiryDays + 'd left' }}
                     </span>
 
                     <span :class="['compact-quantity', item.quantityLevel || 'high']">
@@ -711,6 +716,8 @@ import { auth, db } from '@/firebase'
 import {
   addFoodItem,
   deleteFoodItem,
+  logFoodAction,
+  FoodActionKind,
   markFoodAsDonated,
   markFoodAsUsed,
   updateFoodItem,
@@ -744,6 +751,8 @@ interface InventoryItem {
   volume: string
   location: string
   expiryDays: number
+  isExpired: boolean
+  expiryDate: string
   category: string
   foodType: string
   searchTerms: string
@@ -1000,13 +1009,17 @@ function mapFoodToInventoryItem(item: FoodItem): InventoryItem {
     countertop: 'Countertop',
   }
 
+  const rawExpiryDate = typeof expiryDate === 'string' ? expiryDate : new Date().toISOString().slice(0, 10)
+  const days = calculateDaysUntil(rawExpiryDate)
   return {
     id: item.id,
     name: item.name || 'Unnamed Item',
     description: typeof notes === 'string' ? notes : '',
     volume,
     location: typeof storageLocation === 'string' ? storageLocation : (locationByCategory[category] || 'Storage'),
-    expiryDays: calculateDaysUntil(typeof expiryDate === 'string' ? expiryDate : new Date().toISOString().slice(0, 10)),
+    expiryDays: days,
+    isExpired: days < 0,
+    expiryDate: rawExpiryDate,
     category,
     foodType: typeof foodType === 'string' ? foodType : 'Other',
     searchTerms: String(item.name || '').toLowerCase(),
@@ -1170,7 +1183,22 @@ function requestDeleteItem(id: string) {
 }
 
 async function deleteItem(id: string) {
+  const item = inventory.value.find((i) => i.id === id)
   try {
+    // Log as wasted if the item is already expired
+    if (item && item.isExpired && currentUid.value) {
+      await logFoodAction(currentUid.value, {
+        food_id: id,
+        kind: FoodActionKind.WASTED,
+        name: item.name,
+        category: item.category,
+        food_type: item.foodType,
+        quantity: getVolumeQuantity(item.volume),
+        unit: getVolumeUnit(item.volume),
+        expiry_date: item.expiryDate,
+        was_expired: true,
+      }).catch((err) => console.error('Failed to log wasted action:', err))
+    }
     await deleteFoodItem(id)
     selectedDonationIds.value.delete(id)
     notifyMessage('Item removed.')
@@ -1203,6 +1231,21 @@ async function finishItem() {
   const item = inventory.value.find((i) => i.id === currentUseItemId.value)
   if (!item) return
   try {
+    // Log to food_actions: wasted if already expired, finished if used in time
+    if (currentUid.value) {
+      const kind = item.isExpired ? FoodActionKind.WASTED : FoodActionKind.FINISHED
+      await logFoodAction(currentUid.value, {
+        food_id: item.id,
+        kind,
+        name: item.name,
+        category: item.category,
+        food_type: item.foodType,
+        quantity: getVolumeQuantity(item.volume),
+        unit: getVolumeUnit(item.volume),
+        expiry_date: item.expiryDate,
+        was_expired: item.isExpired,
+      }).catch((err) => console.error('Failed to log food action:', err))
+    }
     await markFoodAsUsed(item.id)
     recordInventoryAnalytics(item, 'used')
     selectedDonationIds.value.delete(currentUseItemId.value)
@@ -1376,7 +1419,8 @@ function calculateDaysUntil(dateString: string): number {
   today.setHours(0, 0, 0, 0)
   const target = new Date(`${dateString}T00:00:00`)
   target.setHours(0, 0, 0, 0)
-  return Math.max(0, Math.ceil((target.getTime() - today.getTime()) / 86400000))
+  // Allow negative values so we can detect expired items (expiryDays < 0)
+  return Math.ceil((target.getTime() - today.getTime()) / 86400000)
 }
 
 function formatDisplayDate(dateString: string): string {
@@ -2322,6 +2366,14 @@ hr {
   background: #fff1e8;
   padding: 4px 10px;
   border-radius: 20px;
+}
+
+.expiry-badge.expired {
+  color: #991b1b;
+  background: #fee2e2;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 700;
 }
 
 .card-badges {
