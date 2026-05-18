@@ -2,16 +2,31 @@ import { mount } from '@vue/test-utils'
 import { describe, it, expect, vi } from 'vitest'
 import RegisterView from '@/views/RegisterView.vue'
 
+// Prevent firebase.ts from executing getAuth() with missing env vars in CI
+vi.mock('@/firebase', () => ({
+  auth: { currentUser: null },
+  db: {},
+}))
+
+vi.mock('firebase/auth', () => ({
+  getAuth: vi.fn(() => ({ currentUser: null })),
+  onAuthStateChanged: vi.fn((_auth: unknown, cb: (user: null) => void) => { cb(null); return vi.fn() }),
+  signInWithEmailAndPassword: vi.fn(),
+  createUserWithEmailAndPassword: vi.fn(),
+  sendEmailVerification: vi.fn(),
+  signOut: vi.fn(() => Promise.resolve()),
+}))
+
 vi.mock('vue-router', () => ({
   useRouter: () => ({
     push: vi.fn(),
   }),
 }))
 
-
 vi.mock('@/services/authService', () => ({
   registerUser: vi.fn(() => Promise.resolve()),
 }))
+
 
 describe('RegisterView', () => {
   it('shows error if fields are empty', async () => {
