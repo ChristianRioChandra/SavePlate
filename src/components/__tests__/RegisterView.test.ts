@@ -4,7 +4,10 @@ import RegisterView from '@/views/RegisterView.vue'
 
 // Prevent firebase.ts from executing getAuth() with missing env vars in CI
 vi.mock('@/firebase', () => ({
-  auth: { currentUser: null },
+  auth: {
+    currentUser: null,
+    signOut: vi.fn(() => Promise.resolve()),
+  },
   db: {},
 }))
 
