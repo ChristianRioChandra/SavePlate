@@ -43,6 +43,8 @@
             :key="notif.id"
             class="notif-item"
             :class="{ unread: !notif.read, selected: selectedIds.has(notif.id) }"
+            @click="handleNotifClick(notif)"
+            style="cursor: pointer;"
           >
             <!-- Checkbox -->
             <input
@@ -50,6 +52,7 @@
               class="notif-checkbox"
               :checked="selectedIds.has(notif.id)"
               @change="toggleSelect(notif.id)"
+              @click.stop
             />
 
             <!-- Icon -->
@@ -85,6 +88,7 @@ import BaseSidebar from '@/components/BaseSidebar.vue'
 import BaseTopbar from '@/components/BaseTopbar.vue'
 import type { NavItem } from '@/components/BaseSidebar.vue'
 import { useNotificationsStore } from '@/stores/notifications'
+import { useRouter } from 'vue-router'
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', route: '/dashboard', icon: 'bi bi-graph-up' },
@@ -99,6 +103,7 @@ const navItems: NavItem[] = [
 const notificationsStore = useNotificationsStore()
 const searchQuery = ref('')
 const showNotifPopup = ref(false)
+const router = useRouter()
 
 const selectedIds = ref<Set<string>>(new Set())
 const selectAll = ref(false)
@@ -151,6 +156,30 @@ async function deleteSelected() {
   selectAll.value = false
 }
 
+const handleNotifClick = async (notif: any) => {
+  try {
+    if (!notif.read && !notif.is_read) {
+      await notificationsStore.markAsRead(notif.id)
+    }
+  } catch (err) {
+    console.warn('Failed to mark notification as read:', err)
+  }
+
+  const typeStr = (notif.type || '').toUpperCase()
+  const msgStr = (notif.title || notif.message || notif.detail || '').toUpperCase()
+
+  if (typeStr.includes('EXPIRY') || msgStr.includes('EXPIR')) {
+    router.push('/inventory')
+  } else if (typeStr.includes('DONATION') || msgStr.includes('DONAT')) {
+    router.push('/donations')
+  } else if (typeStr.includes('MEAL') || msgStr.includes('MEAL')) {
+    router.push('/meal-plan')
+  } else if (typeStr.includes('ACCOUNT') || msgStr.includes('ACCOUNT')) {
+    router.push('/settings')
+  } else {
+    alert(`Debug - Unhandled Notification:\nType: ${notif.type}\nMessage: ${notif.title || notif.message || notif.detail}`)
+  }
+}
 </script>
 
 <style scoped>

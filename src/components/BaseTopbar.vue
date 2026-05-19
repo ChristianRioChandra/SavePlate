@@ -15,6 +15,7 @@
               :key="notif.id"
               class="notif-popup-item"
               :class="{ unread: !notif.is_read }"
+              @click="handleNotifClick(notif)"
             >
               <div class="notif-item-icon"><i class="bi" :class="notif.icon"></i></div>
               <div class="notif-item-body">
@@ -81,6 +82,32 @@ const showNotifPopup = ref(false)
 
 const markAllAsRead = () => {
   notificationsStore.markAllAsRead()
+}
+
+const handleNotifClick = async (notif: any) => {
+  try {
+    if (!notif.is_read && !notif.read) {
+      await notificationsStore.markAsRead(notif.id)
+    }
+  } catch (err) {
+    console.warn('Failed to mark notification as read:', err)
+  }
+  showNotifPopup.value = false
+
+  const typeStr = (notif.type || '').toUpperCase()
+  const msgStr = (notif.title || notif.message || notif.detail || '').toUpperCase()
+
+  if (typeStr.includes('EXPIRY') || msgStr.includes('EXPIR')) {
+    router.push('/inventory')
+  } else if (typeStr.includes('DONATION') || msgStr.includes('DONAT')) {
+    router.push('/donations')
+  } else if (typeStr.includes('MEAL') || msgStr.includes('MEAL')) {
+    router.push('/meal-plan')
+  } else if (typeStr.includes('ACCOUNT') || msgStr.includes('ACCOUNT')) {
+    router.push('/settings')
+  } else {
+    alert(`Debug - Unhandled Notification:\nType: ${notif.type}\nMessage: ${notif.title || notif.message || notif.detail}`)
+  }
 }
 
 const viewAllNotifications = () => {
@@ -289,6 +316,7 @@ const handleLogout = async () => {
   border-bottom: 1px solid #f1f5f9;
   position: relative;
   transition: background 0.15s;
+  cursor: pointer;
 }
 
 .notif-popup-item:hover {
