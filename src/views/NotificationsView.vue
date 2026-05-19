@@ -5,29 +5,68 @@
 
       <div class="main-content">
         <!-- Top Bar -->
-        <BaseTopbar
-          title="Notifications"
-          search-placeholder="Search notifications..."
-          v-model:search-value="searchQuery"
-          :unread-count="notificationsStore.unreadCount"
-          @open-notifications="() => { showNotifPopup = true }"
-        >
-          <template #actions>
-            <label class="select-all-wrap">
-              <span>Select All</span>
-              <input type="checkbox" v-model="selectAll" @change="toggleSelectAll" />
-            </label>
-            <button class="action-icon-btn danger" @click="deleteSelected" title="Delete selected">
-              <i class="bi bi-trash"></i>
-              <span>Delete</span>
-            </button>
-            <button class="action-icon-btn" @click="markSelectedAsRead" title="Mark as read">
-              <i class="bi bi-check2-all"></i>
-              <span>Read</span>
-            </button>
-          </template>
-        </BaseTopbar>
+        <div class="desktop-topbar">
+          <BaseTopbar
+            ref="topbarRef"
+            title="Notifications"
+            show-back-button
+            @back="goBack"
+            search-placeholder="Search notifications..."
+            v-model:search-value="searchQuery"
+            :unread-count="notificationsStore.unreadCount"
+            @open-notifications="
+              () => {
+                showNotifPopup = true
+              }
+            "
+          />
+        </div>
 
+        <!-- Sleek Bulk Manage Bar (renders just above the list) -->
+        <div class="notif-manage-bar">
+          <div class="manage-bar-left">
+            <button
+              type="button"
+              class="manage-pill-btn select-all-pill"
+              :class="{ active: selectAll }"
+              @click="
+                selectAll = !selectAll,
+                toggleSelectAll()
+              "
+            >
+              <i class="bi" :class="selectAll ? 'bi-check-square-fill' : 'bi-square'"></i>
+              <span>Select All</span>
+            </button>
+            <transition name="fade">
+              <span v-if="selectedIds.size > 0" class="selected-count-badge">
+                {{ selectedIds.size }} selected
+              </span>
+            </transition>
+          </div>
+
+          <transition name="slide-fade">
+            <div class="manage-bar-right" v-if="selectedIds.size > 0">
+              <button
+                type="button"
+                class="manage-action-btn danger"
+                @click="deleteSelected"
+                title="Delete selected"
+              >
+                <i class="bi bi-trash"></i>
+                <span>Delete</span>
+              </button>
+              <button
+                type="button"
+                class="manage-action-btn success"
+                @click="markSelectedAsRead"
+                title="Mark as read"
+              >
+                <i class="bi bi-check2-all"></i>
+                <span>Read</span>
+              </button>
+            </div>
+          </transition>
+        </div>
 
         <!-- Notification List -->
         <div class="notif-list">
@@ -43,6 +82,8 @@
             :key="notif.id"
             class="notif-item"
             :class="{ unread: !notif.read, selected: selectedIds.has(notif.id) }"
+            @click="handleNotifClick(notif)"
+            style="cursor: pointer"
           >
             <!-- Checkbox -->
             <input
@@ -50,6 +91,7 @@
               class="notif-checkbox"
               :checked="selectedIds.has(notif.id)"
               @change="toggleSelect(notif.id)"
+              @click.stop
             />
 
             <!-- Icon -->
@@ -76,6 +118,21 @@
         </div>
       </div>
     </div>
+
+    <!-- Mobile Bottom Navigation (appears on small screens) -->
+    <nav class="mobile-bottom-nav">
+      <button
+        v-for="item in navItems.filter((i) => i.label !== 'Settings')"
+        :key="item.route"
+        class="mobile-nav-item"
+        :class="{ active: isActiveRoute(item.route) }"
+        @click="router.push(item.route)"
+      >
+        <i v-if="item.icon" :class="item.icon"></i>
+        <span>{{ item.label }}</span>
+      </button>
+
+    </nav>
   </div>
 </template>
 
@@ -85,6 +142,8 @@ import BaseSidebar from '@/components/BaseSidebar.vue'
 import BaseTopbar from '@/components/BaseTopbar.vue'
 import type { NavItem } from '@/components/BaseSidebar.vue'
 import { useNotificationsStore } from '@/stores/notifications'
+import { useRouter, useRoute } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', route: '/dashboard', icon: 'bi bi-graph-up' },
@@ -96,9 +155,27 @@ const navItems: NavItem[] = [
 ]
 
 // ─── State ────────────────────────────────────────────────────────────────────
+const topbarRef = ref<any>(null)
 const notificationsStore = useNotificationsStore()
 const searchQuery = ref('')
 const showNotifPopup = ref(false)
+const router = useRouter()
+const route = useRoute()
+const authStore = useAuthStore()
+
+function goBack() {
+  router.back()
+}
+
+const handleLogout = async () => {
+  await authStore.logout()
+  router.push('/')
+}
+
+function isActiveRoute(itemRoute: string) {
+  if (itemRoute === '/') return route.path === '/'
+  return route.path.startsWith(itemRoute)
+}
 
 const selectedIds = ref<Set<string>>(new Set())
 const selectAll = ref(false)
@@ -110,10 +187,11 @@ const selectAll = ref(false)
 const filteredNotifications = computed(() => {
   if (!searchQuery.value) return notificationsStore.notifications
   const q = searchQuery.value.toLowerCase()
-  return notificationsStore.notifications.filter(n => 
-    n.title.toLowerCase().includes(q) || 
-    n.detail.toLowerCase().includes(q) ||
-    n.typeLabel.toLowerCase().includes(q)
+  return notificationsStore.notifications.filter(
+    (n) =>
+      n.title.toLowerCase().includes(q) ||
+      n.detail.toLowerCase().includes(q) ||
+      n.typeLabel.toLowerCase().includes(q),
   )
 })
 
@@ -125,7 +203,9 @@ function toggleSelect(id: string) {
     selectedIds.value.add(id)
   }
   selectedIds.value = new Set(selectedIds.value) // trigger reactivity
-  selectAll.value = selectedIds.value.size === filteredNotifications.value.length && filteredNotifications.value.length > 0
+  selectAll.value =
+    selectedIds.value.size === filteredNotifications.value.length &&
+    filteredNotifications.value.length > 0
 }
 
 function toggleSelectAll() {
@@ -151,6 +231,32 @@ async function deleteSelected() {
   selectAll.value = false
 }
 
+const handleNotifClick = async (notif: any) => {
+  try {
+    if (!notif.read && !notif.is_read) {
+      await notificationsStore.markAsRead(notif.id)
+    }
+  } catch (err) {
+    console.warn('Failed to mark notification as read:', err)
+  }
+
+  const typeStr = (notif.type || '').toUpperCase()
+  const msgStr = (notif.title || notif.message || notif.detail || '').toUpperCase()
+
+  if (typeStr.includes('EXPIRY') || msgStr.includes('EXPIR')) {
+    router.push('/inventory')
+  } else if (typeStr.includes('DONATION') || msgStr.includes('DONAT')) {
+    router.push('/donations')
+  } else if (typeStr.includes('MEAL') || msgStr.includes('MEAL')) {
+    router.push('/meal-plan')
+  } else if (typeStr.includes('ACCOUNT') || msgStr.includes('ACCOUNT')) {
+    router.push('/settings')
+  } else {
+    alert(
+      `Debug - Unhandled Notification:\nType: ${notif.type}\nMessage: ${notif.title || notif.message || notif.detail}`,
+    )
+  }
+}
 </script>
 
 <style scoped>
@@ -214,53 +320,142 @@ async function deleteSelected() {
   justify-content: flex-end;
 }
 
-/* ── Select All Checkbox ──────────────────────────────────────────────────── */
-.select-all-wrap {
+/* ── Sleek Bulk Manage Bar ────────────────────────────────────────────────── */
+.notif-manage-bar {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgba(248, 250, 252, 0.8);
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  margin-bottom: 20px;
+  backdrop-filter: blur(12px);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.manage-bar-left,
+.manage-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.manage-pill-btn {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: #3a5068;
+  background: white;
+  border: 1.5px solid #deebe2;
+  border-radius: 100px;
+  padding: 8px 18px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #475569;
   cursor: pointer;
-  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(31, 47, 62, 0.03);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
 }
 
-.select-all-wrap input[type='checkbox'] {
-  width: 18px;
-  height: 18px;
-  accent-color: #2c7a4d;
-  cursor: pointer;
+.manage-pill-btn:hover {
+  background: #f8fafc;
+  border-color: #2c7a4d;
+  color: #1b5e37;
+  transform: translateY(-1px);
 }
 
-/* ── Action Buttons ───────────────────────────────────────────────────────── */
-.action-icon-btn {
-  display: flex;
+.manage-pill-btn.active {
+  background: #eef7f1;
+  border-color: #2c7a4d;
+  color: #2c7a4d;
+  box-shadow: 0 4px 12px rgba(44, 122, 77, 0.1);
+}
+
+.selected-count-badge {
+  background: #2c7a4d;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 12px rgba(44, 122, 77, 0.25);
+  animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.manage-action-btn {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
-  border-radius: 20px;
-  border: 1.5px solid #e2e8f0;
   background: white;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 100px;
+  padding: 8px 16px;
   font-size: 0.82rem;
-  font-weight: 600;
-  color: #3a5068;
+  font-weight: 700;
+  color: #475569;
   cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.action-icon-btn:hover {
-  background: #f1f5f9;
+.manage-action-btn.danger {
+  color: #ef4444;
+  border-color: #fee2e2;
+  background: #fff5f5;
 }
 
-.action-icon-btn.danger {
-  color: #dc2626;
-  border-color: #fecaca;
-}
-
-.action-icon-btn.danger:hover {
+.manage-action-btn.danger:hover {
   background: #fef2f2;
+  border-color: #fecaca;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.12);
+}
+
+.manage-action-btn.success {
+  color: #10b981;
+  border-color: #d1fae5;
+  background: #f0fdf4;
+}
+
+.manage-action-btn.success:hover {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.12);
+}
+
+/* Transitions & Keyframes */
+@keyframes popIn {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  transform: translateY(-8px);
+  opacity: 0;
 }
 
 /* ── Notification List ────────────────────────────────────────────────── */
@@ -404,10 +599,91 @@ async function deleteSelected() {
   color: #7e95b0;
 }
 
+/* Mobile Bottom Navigation (Base Style) */
+.mobile-bottom-nav {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 40;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #deebe2;
+  border-radius: 24px;
+  box-shadow: 0 16px 44px rgba(31, 47, 62, 0.12);
+  padding: 8px 10px;
+  backdrop-filter: blur(16px);
+  display: none;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
+}
+
+.mobile-nav-item {
+  border: none;
+  background: transparent;
+  color: #6b7e93;
+  min-height: 58px;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mobile-nav-item i {
+  font-size: 1.35rem;
+}
+
+.mobile-nav-item:hover {
+  background: #f0f5f2;
+}
+
+.mobile-nav-item.active {
+  color: #2c7a4d;
+  background: #eef7f1;
+}
+
+/* Custom Action Bar Items inside Top Bar Slot */
+/* Manage Bar Responsive Styling */
+@media (max-width: 640px) {
+  .notif-manage-bar {
+    padding: 8px 12px;
+    border-radius: 18px;
+    gap: 8px;
+  }
+
+  .manage-pill-btn {
+    padding: 6px 14px;
+    font-size: 0.78rem;
+  }
+
+  .manage-action-btn {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+}
+
 /* Responsive */
-@media (max-width: 920px) {
+@media (max-width: 1120px) {
+  .notifications-page {
+    padding: 12px 12px 112px;
+  }
+
   .notifications-shell {
     grid-template-columns: 1fr;
+  }
+
+  .mobile-bottom-nav {
+    display: grid;
+  }
+
+  /* Hide the desktop sidebar on tablets/phones */
+  .notifications-shell > :deep(.sidebar) {
+    display: none;
   }
 
   .notif-header-row {
@@ -417,20 +693,29 @@ async function deleteSelected() {
 
   .notif-meta {
     align-items: flex-start;
+    margin-top: 4px;
+  }
+}
+
+@media (max-width: 640px) {
+  .notif-item {
+    padding: 16px;
+    border-radius: 20px;
+    gap: 12px;
   }
 
-  .page-title {
-    font-size: 1.8rem;
+  .notif-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 1.2rem;
   }
 
-  .top-bar {
-    flex-direction: column;
-    align-items: flex-start;
+  .notif-title {
+    font-size: 0.88rem;
   }
 
-  .top-bar-actions {
-    justify-content: flex-start;
-    min-width: 100%;
+  .notif-detail {
+    font-size: 0.78rem;
   }
 }
 </style>

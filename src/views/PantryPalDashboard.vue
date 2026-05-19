@@ -6,11 +6,14 @@
       <BaseSidebar :nav-items="navItems" />
 
       <div class="main-content">
-        <BaseTopbar
-          title="Dashboard"
-          search-placeholder="Search food, donations, meals..."
-          v-model:search-value="searchQuery"
-        />
+        <div class="desktop-topbar">
+          <BaseTopbar
+            ref="topbarRef"
+            title="Dashboard"
+            search-placeholder="Search food, donations, meals..."
+            v-model:search-value="searchQuery"
+          />
+        </div>
 
         <div class="dashboard-grid">
           <!-- Welcome Card -->
@@ -26,8 +29,17 @@
               <span>Expiry Alerts</span>
             </div>
             <div class="alert-list">
-              <div v-for="alert in expiryAlerts" :key="alert.id" class="alert-item">
-                ⚠ {{ alert.name }} is about to expire — {{ alert.days }} day{{ alert.days !== 1 ? 's' : '' }} left
+              <div v-for="alert in expiryAlerts" :key="alert.id" class="alert-item" :class="{ 'alert-expired': alert.days < 0 }">
+                ⚠ {{ alert.name }}
+                <template v-if="alert.days < 0">
+                  expired — {{ Math.abs(alert.days) }} day{{ Math.abs(alert.days) !== 1 ? 's' : '' }} ago
+                </template>
+                <template v-else-if="alert.days === 0">
+                  expires today
+                </template>
+                <template v-else>
+                  is about to expire — {{ alert.days }} day{{ alert.days !== 1 ? 's' : '' }} left
+                </template>
               </div>
               <div v-if="expiryAlerts.length === 0" class="no-alerts">
                 ✅ No items expiring soon!
@@ -47,7 +59,7 @@
                   <div class="inv-name">{{ item.name }}</div>
                   <div class="inv-sub">{{ item.location }} · {{ item.type }}</div>
                 </div>
-                <span class="inv-tag" :class="{ warn: item.warning }">{{ item.tag }}</span>
+                <span class="inv-tag" :class="{ warn: item.tag === 'Expiring', expired: item.tag === 'Expired' }">{{ item.tag }}</span>
               </div>
             </div>
             <button class="card-action-btn" @click="router.push('/inventory')">
@@ -115,18 +127,33 @@
 
       <BaseRightSidebar
         :total-items="inventoryItems.length"
-        :expiring-soon="expiryAlerts.length"
+        :expiring-soon="expiringSoonCount"
         @add-food="handleAddFood"
         @donate-items="router.push('/donations')"
         @plan-meal="router.push('/meal-plan')"
       />
     </div>
+
+    <!-- Mobile Bottom Navigation (appears on small screens) -->
+    <nav class="mobile-bottom-nav">
+      <button
+        v-for="item in navItems.filter(i => i.label !== 'Settings')"
+        :key="item.route"
+        class="mobile-nav-item"
+        :class="{ active: isActiveRoute(item.route) }"
+        @click="router.push(item.route)"
+      >
+        <i v-if="item.icon" :class="item.icon"></i>
+        <span>{{ item.label }}</span>
+      </button>
+
+    </nav>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { db } from '@/firebase'
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore'
@@ -135,9 +162,18 @@ import BaseSidebar from '@/components/BaseSidebar.vue'
 import BaseTopbar from '@/components/BaseTopbar.vue'
 import BaseRightSidebar from '@/components/BaseRightSidebar.vue'
 import type { NavItem } from '@/components/BaseSidebar.vue'
+import { useNotificationsStore } from '@/stores/notifications'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
+const notificationsStore = useNotificationsStore()
+const topbarRef = ref<any>(null)
+
+const handleLogout = async () => {
+  await authStore.logout()
+  router.push('/')
+}
 
 // ─── Topbar is now a shared component ─────────────────────────────────────────
 
@@ -192,6 +228,14 @@ const expiryAlerts = computed(() => {
       days: calculateDaysUntil(item.expiryDate)
     }))
     .slice(0, 3) // Show top 3 most urgent
+})
+
+// Count items expiring soon (0 to 3 days left, excluding already expired)
+const expiringSoonCount = computed(() => {
+  return inventoryItems.value.filter(item => {
+    const days = calculateDaysUntil(item.expiryDate)
+    return days >= 0 && days <= 3
+  }).length
 })
 
 // ─── Meal Plan (Dashboard) ────────────────────────────────────────────────────
@@ -255,7 +299,7 @@ onMounted(() => {
           name: data.name,
           location: data.storage_location || 'Storage',
           type: data.food_type || 'Other',
-          tag: days <= 3 ? 'Expiring' : 'Good',
+          tag: days < 0 ? 'Expired' : (days <= 3 ? 'Expiring' : 'Good'),
           warning: days <= 3,
           expiryDate: data.expiry_date // store for computed properties
         }
@@ -273,6 +317,11 @@ onUnmounted(() => {
 
 function handleAddFood() {
   router.push('/inventory?action=add')
+}
+
+function isActiveRoute(itemRoute: string) {
+  if (itemRoute === '/') return route.path === '/'
+  return route.path.startsWith(itemRoute)
 }
 </script>
 
@@ -499,6 +548,12 @@ hr {
   border-left: 4px solid #f59e0b;
 }
 
+.alert-expired {
+  background: #fee2e2;
+  color: #991b1b;
+  border-left: 4px solid #ef4444;
+}
+
 .inventory-list {
   margin-bottom: 16px;
 }
@@ -548,6 +603,11 @@ hr {
 .inv-tag.warn {
   background: #fef3c7;
   color: #92400e;
+}
+
+.inv-tag.expired {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .card-action-btn {
@@ -881,6 +941,126 @@ hr {
   user-select: none;
 }
 
+/* Mobile Top Navigation */
+.mobile-top-shell {
+  background: linear-gradient(180deg, #ffffff 0%, #f7faf7 100%);
+  border: 1px solid #e3ebdf;
+  border-radius: 28px;
+  padding: 18px;
+  margin-bottom: 18px;
+  box-shadow: 0 18px 32px rgba(31, 47, 62, 0.05);
+  display: none;
+}
+
+.mobile-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.mobile-header-row h1 {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: #0a1c2f;
+}
+
+.mobile-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 1.35rem;
+  color: #5f7f9e;
+}
+
+.mobile-header-actions i.clickable {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.mobile-header-actions i.clickable:hover {
+  color: #2c7a4d;
+}
+
+.notif-bell-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.notif-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  transform: translate(50%, -50%);
+  background: linear-gradient(135deg, #ff4d4d, #e60000);
+  color: white;
+  font-size: 9px;
+  font-weight: 800;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4.5px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid white;
+  pointer-events: none;
+  box-shadow: 0 3px 8px rgba(230, 0, 0, 0.35);
+  font-family: 'Inter', sans-serif;
+  line-height: 1;
+}
+
+/* Mobile Bottom Navigation */
+.mobile-bottom-nav {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 40;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #deebe2;
+  border-radius: 24px;
+  box-shadow: 0 16px 44px rgba(31, 47, 62, 0.12);
+  padding: 8px 10px;
+  backdrop-filter: blur(16px);
+  display: none;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
+}
+
+.mobile-nav-item {
+  border: none;
+  background: transparent;
+  color: #6b7e93;
+  min-height: 58px;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mobile-nav-item i {
+  font-size: 1.35rem;
+}
+
+.mobile-nav-item:hover {
+  background: #f0f5f2;
+}
+
+.mobile-nav-item.active {
+  color: #2c7a4d;
+  background: #eef7f1;
+}
+
 /* Transition */
 .fade-enter-active,
 .fade-leave-active {
@@ -893,14 +1073,25 @@ hr {
 
 /* Responsive */
 @media (max-width: 1120px) {
-  .dashboard {
-    grid-template-columns: 232px minmax(0, 1fr);
+  .dashboard-page {
+    padding-bottom: 112px;
   }
-  .right-sidebar {
-    grid-column: 1 / -1;
-    position: static;
+
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-bottom-nav {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  /* Hide the desktop sidebar on tablets/phones */
+  .dashboard > :deep(.sidebar) {
+    display: none;
+  }
+
+  .right-sidebar {
+    display: none;
   }
 }
 

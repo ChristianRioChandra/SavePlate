@@ -1,7 +1,8 @@
 <template>
   <div class="top-bar-container">
     <!-- ── Notification Popup Overlay ─────────────────────────────────────── -->
-    <Transition name="fade">
+    <Teleport to="body">
+      <Transition name="fade">
       <div v-if="showNotifPopup" class="notif-overlay" @click.self="showNotifPopup = false">
         <div class="notif-popup">
           <div class="notif-popup-header">
@@ -14,6 +15,7 @@
               :key="notif.id"
               class="notif-popup-item"
               :class="{ unread: !notif.is_read }"
+              @click="handleNotifClick(notif)"
             >
               <div class="notif-item-icon"><i class="bi" :class="notif.icon"></i></div>
               <div class="notif-item-body">
@@ -32,10 +34,14 @@
           </button>
         </div>
       </div>
-    </Transition>
+      </Transition>
+    </Teleport>
 
     <div class="top-bar" :class="{ blurred: showNotifPopup }">
       <div class="page-title">
+        <button v-if="showBackButton" class="back-btn" @click="$emit('back')" title="Go Back">
+          <i class="bi bi-chevron-left"></i>
+        </button>
         <h2>{{ title }}</h2>
       </div>
       <div class="top-bar-actions">
@@ -81,6 +87,32 @@ const markAllAsRead = () => {
   notificationsStore.markAllAsRead()
 }
 
+const handleNotifClick = async (notif: any) => {
+  try {
+    if (!notif.is_read && !notif.read) {
+      await notificationsStore.markAsRead(notif.id)
+    }
+  } catch (err) {
+    console.warn('Failed to mark notification as read:', err)
+  }
+  showNotifPopup.value = false
+
+  const typeStr = (notif.type || '').toUpperCase()
+  const msgStr = (notif.title || notif.message || notif.detail || '').toUpperCase()
+
+  if (typeStr.includes('EXPIRY') || msgStr.includes('EXPIR')) {
+    router.push('/inventory')
+  } else if (typeStr.includes('DONATION') || msgStr.includes('DONAT')) {
+    router.push('/donations')
+  } else if (typeStr.includes('MEAL') || msgStr.includes('MEAL')) {
+    router.push('/meal-plan')
+  } else if (typeStr.includes('ACCOUNT') || msgStr.includes('ACCOUNT')) {
+    router.push('/settings')
+  } else {
+    alert(`Debug - Unhandled Notification:\nType: ${notif.type}\nMessage: ${notif.title || notif.message || notif.detail}`)
+  }
+}
+
 const viewAllNotifications = () => {
   showNotifPopup.value = false
   router.push('/notifications')
@@ -93,17 +125,20 @@ const props = withDefaults(
     searchValue?: string
     unreadCount?: number
     showSearch?: boolean
+    showBackButton?: boolean
   }>(),
   {
     searchPlaceholder: 'Search...',
     unreadCount: 0,
     showSearch: true,
+    showBackButton: false,
   },
 )
 
 defineEmits<{
   (e: 'open-notifications'): void
   (e: 'update:searchValue', value: string): void
+  (e: 'back'): void
 }>()
 
 const navigateToSettings = () => {
@@ -114,6 +149,12 @@ const handleLogout = async () => {
   await authStore.logout()
   router.push('/')
 }
+
+defineExpose({
+  openNotifications: () => {
+    showNotifPopup.value = true
+  }
+})
 </script>
 
 <style scoped>
@@ -124,7 +165,7 @@ const handleLogout = async () => {
   width: 100%;
 }
 
- .top-bar {
+.top-bar {
   background: white;
   border-radius: 36px;
   padding: 18px 30px;
@@ -137,9 +178,40 @@ const handleLogout = async () => {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .page-title h2 {
   font-size: 2.15rem;
   font-weight: 800;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: #475569;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+.back-btn:hover {
+  background: #eef7f1;
+  border-color: #a7f3d0;
+  color: #2c7a4d;
+  transform: translateX(-2px);
 }
 
 .top-bar-actions {
@@ -227,7 +299,7 @@ const handleLogout = async () => {
 .notif-overlay {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: 10000;
   background: rgba(10, 28, 47, 0.35);
   backdrop-filter: blur(3px);
   display: flex;
@@ -287,6 +359,7 @@ const handleLogout = async () => {
   border-bottom: 1px solid #f1f5f9;
   position: relative;
   transition: background 0.15s;
+  cursor: pointer;
 }
 
 .notif-popup-item:hover {
@@ -385,5 +458,82 @@ const handleLogout = async () => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+@media (max-width: 1120px) {
+  .notif-overlay {
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .notif-popup {
+    width: 100%;
+    max-width: 380px;
+    margin: 0 auto;
+  }
+
+  .top-bar {
+    padding: 14px 22px;
+    border-radius: 24px;
+    margin-bottom: 20px;
+    gap: 12px;
+  }
+
+  .page-title h2 {
+    font-size: 1.6rem;
+  }
+
+  .top-bar-actions {
+    flex-grow: 1;
+    justify-content: flex-end;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  .search-wrapper {
+    max-width: 260px;
+  }
+}
+
+@media (max-width: 640px) {
+  .top-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .page-title {
+    text-align: left;
+  }
+
+  .page-title h2 {
+    font-size: 1.4rem;
+  }
+
+  .top-bar-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    margin-top: 2px;
+    gap: 12px;
+  }
+
+  .search-wrapper {
+    max-width: none;
+    width: 100%;
+  }
+
+  .action-icons {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 12px;
+    font-size: 1.25rem;
+  }
 }
 </style>

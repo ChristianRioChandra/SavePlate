@@ -43,3 +43,5 @@ playwright-report/
 
 *.env
 firebaseServiceAccount.json
+# Local Netlify folder
+.netlify

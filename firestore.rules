@@ -438,14 +438,10 @@ service cloud.firestore {
 
       allow update: if signedIn() &&
         isOwner(resource.data.user_id) &&
-        isValidNotificationDoc(request.resource.data) &&
-        request.resource.data.user_id == resource.data.user_id &&
-        request.resource.data.type == resource.data.type &&
-        request.resource.data.message == resource.data.message &&
-        request.resource.data.related_entity_id == resource.data.related_entity_id &&
-        request.resource.data.created_at == resource.data.created_at;
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['is_read']) &&
+        request.resource.data.is_read is bool;
 
-      allow delete: if false;
+      allow delete: if signedIn() && isOwner(resource.data.user_id);
     }
 
     match /donationListings/{listingId} {
