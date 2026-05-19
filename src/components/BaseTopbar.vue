@@ -1,7 +1,8 @@
 <template>
   <div class="top-bar-container">
     <!-- ── Notification Popup Overlay ─────────────────────────────────────── -->
-    <Transition name="fade">
+    <Teleport to="body">
+      <Transition name="fade">
       <div v-if="showNotifPopup" class="notif-overlay" @click.self="showNotifPopup = false">
         <div class="notif-popup">
           <div class="notif-popup-header">
@@ -32,7 +33,8 @@
           </button>
         </div>
       </div>
-    </Transition>
+      </Transition>
+    </Teleport>
 
     <div class="top-bar" :class="{ blurred: showNotifPopup }">
       <div class="page-title">
@@ -124,7 +126,7 @@ const handleLogout = async () => {
   width: 100%;
 }
 
- .top-bar {
+.top-bar {
   background: white;
   border-radius: 36px;
   padding: 18px 30px;
@@ -227,7 +229,7 @@ const handleLogout = async () => {
 .notif-overlay {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: 10000;
   background: rgba(10, 28, 47, 0.35);
   backdrop-filter: blur(3px);
   display: flex;
