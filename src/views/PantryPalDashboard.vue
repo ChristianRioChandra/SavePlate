@@ -26,8 +26,17 @@
               <span>Expiry Alerts</span>
             </div>
             <div class="alert-list">
-              <div v-for="alert in expiryAlerts" :key="alert.id" class="alert-item">
-                ⚠ {{ alert.name }} is about to expire — {{ alert.days }} day{{ alert.days !== 1 ? 's' : '' }} left
+              <div v-for="alert in expiryAlerts" :key="alert.id" class="alert-item" :class="{ 'alert-expired': alert.days < 0 }">
+                ⚠ {{ alert.name }} 
+                <template v-if="alert.days < 0">
+                  expired — {{ Math.abs(alert.days) }} day{{ Math.abs(alert.days) !== 1 ? 's' : '' }} ago
+                </template>
+                <template v-else-if="alert.days === 0">
+                  expires today
+                </template>
+                <template v-else>
+                  is about to expire — {{ alert.days }} day{{ alert.days !== 1 ? 's' : '' }} left
+                </template>
               </div>
               <div v-if="expiryAlerts.length === 0" class="no-alerts">
                 ✅ No items expiring soon!
@@ -47,7 +56,7 @@
                   <div class="inv-name">{{ item.name }}</div>
                   <div class="inv-sub">{{ item.location }} · {{ item.type }}</div>
                 </div>
-                <span class="inv-tag" :class="{ warn: item.warning }">{{ item.tag }}</span>
+                <span class="inv-tag" :class="{ warn: item.tag === 'Expiring', expired: item.tag === 'Expired' }">{{ item.tag }}</span>
               </div>
             </div>
             <button class="card-action-btn" @click="router.push('/inventory')">
@@ -115,7 +124,7 @@
 
       <BaseRightSidebar
         :total-items="inventoryItems.length"
-        :expiring-soon="expiryAlerts.length"
+        :expiring-soon="expiringSoonCount"
         @add-food="handleAddFood"
         @donate-items="router.push('/donations')"
         @plan-meal="router.push('/meal-plan')"
@@ -194,6 +203,14 @@ const expiryAlerts = computed(() => {
     .slice(0, 3) // Show top 3 most urgent
 })
 
+// Count items expiring soon (0 to 3 days left, excluding already expired)
+const expiringSoonCount = computed(() => {
+  return inventoryItems.value.filter(item => {
+    const days = calculateDaysUntil(item.expiryDate)
+    return days >= 0 && days <= 3
+  }).length
+})
+
 // ─── Meal Plan (Dashboard) ────────────────────────────────────────────────────
 const dashboardDate = ref(new Date())
 const dashboardMealPlan = ref<MealPlan | null>(null)
@@ -255,7 +272,7 @@ onMounted(() => {
           name: data.name,
           location: data.storage_location || 'Storage',
           type: data.food_type || 'Other',
-          tag: days <= 3 ? 'Expiring' : 'Good',
+          tag: days < 0 ? 'Expired' : (days <= 3 ? 'Expiring' : 'Good'),
           warning: days <= 3,
           expiryDate: data.expiry_date // store for computed properties
         }
@@ -499,6 +516,12 @@ hr {
   border-left: 4px solid #f59e0b;
 }
 
+.alert-expired {
+  background: #fee2e2;
+  color: #991b1b;
+  border-left: 4px solid #ef4444;
+}
+
 .inventory-list {
   margin-bottom: 16px;
 }
@@ -548,6 +571,11 @@ hr {
 .inv-tag.warn {
   background: #fef3c7;
   color: #92400e;
+}
+
+.inv-tag.expired {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .card-action-btn {
