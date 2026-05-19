@@ -333,6 +333,15 @@
               <i class="bi bi-arrow-left"></i>
             </button>
             <h1>Manage Inventory</h1>
+            <div class="mobile-header-actions">
+              <div class="notif-bell-container" @click="topbarRef?.openNotifications()">
+                <i class="bi bi-bell clickable" title="Notifications"></i>
+                <span v-if="notificationsStore.unreadCount > 0" class="notif-badge">
+                  {{ notificationsStore.unreadCount > 9 ? '9+' : notificationsStore.unreadCount }}
+                </span>
+              </div>
+              <i class="bi bi-box-arrow-right clickable" @click="handleLogout" title="Logout"></i>
+            </div>
           </div>
 
           <div class="mobile-search-row">
@@ -368,8 +377,9 @@
           </div>
         </section>
 
-        <div class="topbar-sticky-wrap">
+        <div class="topbar-sticky-wrap desktop-topbar">
           <BaseTopbar
+            ref="topbarRef"
             title="Manage Inventory"
             search-placeholder="Search food, donations, meals..."
             v-model:search-value="searchQuery"
@@ -870,9 +880,27 @@
       </aside>
     </div>
 
-    <button type="button" class="mobile-floating-add" @click="openAddModal" aria-label="Add item">
+    <button v-if="selectedDonationIds.size === 0" type="button" class="mobile-floating-add" @click="openAddModal" aria-label="Add item">
       <i class="bi bi-plus-lg"></i>
     </button>
+
+    <!-- Mobile Bulk Action Bar -->
+    <div v-if="selectedDonationIds.size > 0" class="mobile-bulk-action-bar">
+      <div class="mobile-bulk-controls">
+        <span class="bulk-selection-count">{{ selectedDonationIds.size }} selected</span>
+        <button class="bulk-action-btn clear-btn" @click="clearAllSelections" title="Clear selection">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+      <div class="mobile-bulk-actions">
+        <button class="bulk-action-btn select-all-btn" @click="selectAllVisible" title="Select all items">
+          <i class="bi bi-check2-all"></i> All
+        </button>
+        <button class="bulk-action-btn donate-btn" @click="bulkDonateAction" title="Donate selected items">
+          <i class="bi bi-gift"></i> Donate
+        </button>
+      </div>
+    </div>
 
     <nav class="mobile-bottom-nav" aria-label="Primary navigation">
       <button
@@ -926,6 +954,7 @@ import { useRoute, useRouter } from 'vue-router'
 import BaseSidebar from '@/components/BaseSidebar.vue'
 import BaseTopbar from '@/components/BaseTopbar.vue'
 import { auth, db } from '@/firebase'
+import { useAuthStore } from '@/stores/auth'
 import {
   addFoodItem,
   deleteFoodItem,
@@ -949,6 +978,13 @@ import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestor
 const route = useRoute()
 const router = useRouter()
 const notificationsStore = useNotificationsStore()
+const authStore = useAuthStore()
+const topbarRef = ref<any>(null)
+
+const handleLogout = async () => {
+  await authStore.logout()
+  router.push('/')
+}
 
 // Navigation items
 const navItems: NavItem[] = [
@@ -3640,6 +3676,106 @@ footer {
   display: none;
 }
 
+/* Mobile Bulk Action Bar */
+.mobile-bulk-action-bar {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 78px;
+  z-index: 39;
+  background: white;
+  border: 1px solid #e3ebdf;
+  border-radius: 20px;
+  padding: 12px 14px;
+  box-shadow: 0 12px 32px rgba(31, 47, 62, 0.1);
+  display: none;
+  gap: 12px;
+}
+
+.mobile-bulk-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.mobile-bulk-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.bulk-selection-count {
+  background: #eef7f1;
+  color: #2c7a4d;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 18px;
+  white-space: nowrap;
+}
+
+.mobile-bulk-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.bulk-action-btn {
+  border: none;
+  border-radius: 16px;
+  padding: 10px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.bulk-action-btn i {
+  font-size: 1rem;
+}
+
+.bulk-action-btn.select-all-btn {
+  background: #f2f5f0;
+  color: #173b2d;
+}
+
+.bulk-action-btn.select-all-btn:active {
+  background: #e2e8f0;
+  transform: scale(0.95);
+}
+
+.bulk-action-btn.clear-btn {
+  background: #f2f5f0;
+  color: #6b7e93;
+  padding: 10px;
+  font-size: 0.9rem;
+  min-width: auto;
+}
+
+.bulk-action-btn.clear-btn:active {
+  background: #e2e8f0;
+  transform: scale(0.95);
+}
+
+.bulk-action-btn.donate-btn {
+  background: #2c7a4d;
+  color: white;
+  flex-grow: 1;
+  justify-content: center;
+}
+
+.bulk-action-btn.donate-btn:active {
+  background: #1f5a38;
+  transform: scale(0.98);
+}
+
 @media (max-width: 1320px) {
   .dashboard {
     grid-template-columns: clamp(190px, 20vw, 240px) minmax(0, 1fr);
@@ -3830,11 +3966,16 @@ footer {
   }
 
   .manage-inventory-page {
-    padding-bottom: 112px;
+    padding-bottom: 160px;
   }
 
   .desktop-topbar {
-    display: none;
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
   }
 
   .mobile-top-shell,
@@ -4729,5 +4870,61 @@ footer {
   background: #2c7a4d;
   left: 50%;
   top: 50%;
+}
+
+/* Mobile top navigation action additions */
+.mobile-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.mobile-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 1.35rem;
+  color: #5f7f9e;
+}
+
+.mobile-header-actions i.clickable {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.mobile-header-actions i.clickable:hover {
+  color: #2c7a4d;
+}
+
+.notif-bell-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.notif-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  transform: translate(50%, -50%);
+  background: linear-gradient(135deg, #ff4d4d, #e60000);
+  color: white;
+  font-size: 9px;
+  font-weight: 800;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4.5px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid white;
+  pointer-events: none;
+  box-shadow: 0 3px 8px rgba(230, 0, 0, 0.35);
+  font-family: 'Inter', sans-serif;
+  line-height: 1;
 }
 </style>

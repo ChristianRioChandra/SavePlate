@@ -5,6 +5,13 @@
       <BaseSidebar :nav-items="navItems" />
 
       <main class="main-content">
+        <div class="desktop-topbar">
+          <BaseTopbar
+            title="Settings"
+            :show-search="false"
+          />
+        </div>
+
         <section class="hero-card">
           <div>
             <p class="hero-kicker">Preferences</p>
@@ -207,11 +214,26 @@
         </section>
       </main>
     </div>
+
+    <!-- Mobile Bottom Navigation (appears on small screens) -->
+    <nav class="mobile-bottom-nav">
+      <button
+        v-for="item in navItems.filter((i) => i.label !== 'Settings')"
+        :key="item.route"
+        class="mobile-nav-item"
+        :class="{ active: isActiveRoute(item.route) }"
+        @click="router.push(item.route)"
+      >
+        <i v-if="item.icon" :class="item.icon"></i>
+        <span>{{ item.label }}</span>
+      </button>
+    </nav>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, reactive, ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { auth } from '@/firebase'
 import {
   getUserProfile,
@@ -222,6 +244,14 @@ import {
 import { useAuthStore } from '@/stores/auth'
 import BaseSidebar from '@/components/BaseSidebar.vue'
 import type { NavItem } from '@/components/BaseSidebar.vue'
+import BaseTopbar from '@/components/BaseTopbar.vue'
+
+const router = useRouter()
+const route = useRoute()
+
+const isActiveRoute = (path: string) => {
+  return route.path === path
+}
 
 type VisibilityOption = 'public' | 'community' | 'private'
 
@@ -876,6 +906,78 @@ const saveProfile = async () => {
   border: 0;
 }
 
+/* Desktop Topbar Wrapper spacing */
+.desktop-topbar {
+  margin-bottom: 24px;
+}
+
+/* Mobile Bottom Navigation */
+.mobile-bottom-nav {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 40;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #deebe2;
+  border-radius: 24px;
+  box-shadow: 0 16px 44px rgba(31, 47, 62, 0.12);
+  padding: 8px 10px;
+  backdrop-filter: blur(16px);
+  display: none;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
+}
+
+.mobile-nav-item {
+  border: none;
+  background: transparent;
+  color: #6b7e93;
+  min-height: 58px;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mobile-nav-item i {
+  font-size: 1.35rem;
+}
+
+.mobile-nav-item:hover {
+  background: #f0f5f2;
+}
+
+.mobile-nav-item.active {
+  color: #2c7a4d;
+  background: #eef7f1;
+}
+
+@media (max-width: 1120px) {
+  .settings-page {
+    padding-bottom: 112px;
+  }
+
+  .settings-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-bottom-nav {
+    display: grid;
+  }
+
+  /* Hide the desktop sidebar on tablets/phones */
+  .settings-shell > :deep(.sidebar) {
+    display: none;
+  }
+}
+
 @media (max-width: 1040px) {
   .account-grid {
     grid-template-columns: 1fr;
@@ -889,12 +991,6 @@ const saveProfile = async () => {
   .hero-summary {
     width: 100%;
     min-width: 0;
-  }
-}
-
-@media (max-width: 920px) {
-  .settings-shell {
-    grid-template-columns: 1fr;
   }
 }
 

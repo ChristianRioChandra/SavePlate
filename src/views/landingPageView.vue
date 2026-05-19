@@ -37,7 +37,7 @@ export default {
   },
   computed: {
     logoSrc() {
-      return this.scrolled ? this.logoFull : this.logoFullWhite
+      return this.scrolled || this.menuOpen ? this.logoFull : this.logoFullWhite
     },
   },
   methods: {
@@ -132,9 +132,22 @@ export default {
         <li><a href="#how" @click.prevent="scrollToSection('how')">How It Works</a></li>
         <li><a href="#features" @click.prevent="scrollToSection('features')">Features</a></li>
         <li><a href="#mission" @click.prevent="scrollToSection('mission')">Mission</a></li>
+        <!-- Mobile CTA Inside Menu -->
+        <li class="mobile-cta-item">
+          <template v-if="!authStore.isLoggedIn">
+            <a href="#" class="btn-outline" @click.prevent="goToLogin">Log In</a>
+            <a href="#" class="btn-primary" @click.prevent="goToRegister">Get Started</a>
+          </template>
+          <template v-else>
+            <span class="mobile-user-greeting">Welcome, {{ authStore.userName }}!</span>
+            <a href="#" class="btn-primary" @click.prevent="goToDashboard">Dashboard</a>
+            <button class="btn-outline logout-btn" @click="handleLogout">Logout</button>
+          </template>
+        </li>
       </ul>
 
-      <div class="nav-cta">
+      <!-- Desktop CTA Outside Menu -->
+      <div class="nav-cta desktop-cta">
         <!-- When NOT logged in -->
         <template v-if="!authStore.isLoggedIn">
           <a href="#" class="btn-outline" @click.prevent="goToLogin">Log In</a>
@@ -543,6 +556,10 @@ nav.scrolled .user-greeting {
 
 .nav-links a:hover::after {
   transform: scaleX(1);
+}
+
+.mobile-cta-item {
+  display: none;
 }
 
 .nav-cta {
@@ -1197,13 +1214,14 @@ nav.scrolled .user-greeting {
 }
 
 .hamburger span {
-  background: var(--surface-soft);
+  background: #fff;
   border-radius: 2px;
   display: block;
   height: 2px;
   transition:
     opacity 0.3s ease,
-    transform 0.3s ease;
+    transform 0.3s ease,
+    background-color 0.3s ease;
   width: 24px;
 }
 
@@ -1271,24 +1289,30 @@ nav.scrolled .user-greeting {
     padding-inline: 20px;
   }
 
+  nav.scrolled .hamburger span,
+  nav.open .hamburger span {
+    background-color: var(--forest) !important;
+  }
+
   .nav-links {
-    background: rgba(255, 253, 248, 0.97);
+    background: rgba(255, 253, 248, 0.98);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    box-shadow: 0 20px 45px rgba(36, 63, 45, 0.14);
+    border-radius: 20px;
+    box-shadow: 0 20px 45px rgba(36, 63, 45, 0.16);
     display: grid;
     gap: 0;
     left: 20px;
     opacity: 0;
-    padding: 8px;
+    padding: 16px;
     pointer-events: none;
     position: absolute;
     right: 20px;
-    top: 74px;
+    top: 76px;
     transform: translateY(-10px);
     transition:
       opacity 0.25s ease,
       transform 0.25s ease;
+    text-align: center;
   }
 
   .nav-links.active {
@@ -1299,49 +1323,56 @@ nav.scrolled .user-greeting {
 
   .nav-links a {
     display: block;
-    padding: 14px 12px;
+    padding: 14px 16px;
+    color: var(--ink);
+    text-shadow: none;
+    border-radius: 12px;
+    text-align: center;
+  }
+
+  .nav-links a:hover {
+    background: var(--surface-soft);
+    color: var(--clay);
   }
 
   .nav-links a::after {
     display: none;
   }
 
-  .nav-cta {
+  .desktop-cta {
+    display: none !important;
+  }
+
+  .mobile-cta-item {
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border-top: 1px solid var(--border);
+    margin-top: 8px;
   }
 
-  .hamburger {
-    display: flex;
-  }
-
-  .mobile-auth {
-    background: rgba(255, 253, 248, 0.97);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    box-shadow: 0 20px 45px rgba(36, 63, 45, 0.14);
-    left: 20px;
-    opacity: 0;
-    padding: 12px 16px;
-    pointer-events: none;
-    position: absolute;
-    right: 20px;
-    top: 120px;
-    transform: translateY(-10px);
-    transition:
-      opacity 0.25s ease,
-      transform 0.25s ease;
-  }
-
-  .mobile-auth.active {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateY(0);
+  .mobile-cta-item .btn-outline,
+  .mobile-cta-item .btn-primary {
+    width: 100%;
+    max-width: 280px;
+    text-align: center;
+    justify-content: center;
+    min-height: 44px;
+    padding-top: 10px;
   }
 
   .mobile-user-greeting {
     color: var(--forest);
-    font-size: 0.9rem;
-    font-weight: 600;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+
+  .hamburger {
+    display: flex;
   }
 
   .hero {

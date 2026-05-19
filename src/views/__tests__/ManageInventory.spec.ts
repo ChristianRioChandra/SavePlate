@@ -69,6 +69,13 @@ vi.mock('@/stores/notifications', () => ({
   }))
 }))
 
+// Mock auth store
+vi.mock('@/stores/auth', () => ({
+  useAuthStore: vi.fn(() => ({
+    logout: vi.fn().mockResolvedValue(undefined),
+  }))
+}))
+
 // Mock firestore
 vi.mock('firebase/firestore', async (importOriginal) => {
   const actual: any = await importOriginal()
